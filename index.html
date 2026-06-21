@@ -1,0 +1,1442 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LOSTKEY - Crea tu estilo</title>
+    <link rel="icon" href="./img/Favicon.png" type="image/png">
+    <!-- React & Babel -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone@7.23.10/babel.min.js"></script>
+    <!-- Tailwind CSS para diseño FULL PRO -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Outfit (Urbana, moderna y amigable) -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Outfit', sans-serif; background-color: #f4f4f5; color: #18181b; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Animaciones suaves */
+        .fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .slide-in-right { animation: slideInRight 0.4s ease-out forwards; }
+        @keyframes slideInRight { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+
+        /* Marquee infinito */
+        @keyframes marquee {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+        .animate-marquee {
+            display: flex;
+            width: fit-content;
+            animation: marquee 20s linear infinite;
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        lk: { black: '#18181b', gray: '#a1a1aa', pink: '#f4a7b9', melange: '#e4e4e7', accent: '#000000' }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        /* @jsx React.createElement */
+        /* @jsxFrag React.Fragment */
+        const { useState, useEffect } = React;
+
+        // --- CONFIGURACIÓN DE LA TIENDA ---
+        const CONFIG = {
+            ig_user: "lostkey.cl",
+            banco: "Mercado Pago",
+            cuenta_tipo: "Cuenta Vista",
+            cuenta_numero: "1044106930",
+            nombre_titular: "LostKey",
+            rut_titular: "221857445",
+            correo_transferencia: "",
+            precio_poleron: 25990,
+            precio_pantalon: 19990,
+            precio_conjunto: 39990,
+            precio_envio: 0,
+            // Pega aquí el enlace de tu Web App de Google Apps Script
+            google_script_url: "https://script.google.com/macros/s/AKfycbzZ-ZbQbKeNA1SJapf-J4dZiXbevEIuU8rrtT8erhypqgTe31b9NXsy2XHvW4abIv--/exec"
+        };
+
+        // --- DATOS DEL MENÚ ---
+        const colores = [
+            { id: "negro", label: "Negro", hex: "#18181b", bg: "#71717a" }, // Gris oscuro para el negro
+            { id: "gris_melange", label: "Gris Melange", hex: "#d4d4d8", bg: "#e4e4e7" }, // Gris pastel
+            { id: "rosado", label: "Rosado", hex: "#fbcfe8", bg: "#fce7f3" } // Rosa pastel
+        ];
+
+        const tallas = ["S", "M", "L", "XL"];
+
+        // --- COMPONENTE PRINCIPAL ---
+        function LostKeyApp() {
+            const [isStarted, setIsStarted] = useState(false);
+            const [showTerms, setShowTerms] = useState(false);
+            const [step, setStep] = useState(0);
+            const [confirmado, setConfirmado] = useState(false);
+            const [orderId] = useState(() => {
+                const timePart = Date.now().toString(36).toUpperCase().slice(-4);
+                const randomPart = Math.random().toString(36).substring(2, 6).toUpperCase();
+                return `LK-${timePart}${randomPart}`;
+            });
+            
+            // Estado para Quick Buy (Favoritos)
+            const [selectedFav, setSelectedFav] = useState(null);
+            const [favTalla, setFavTalla] = useState(null);
+            const [isQuickBuy, setIsQuickBuy] = useState(false);
+            const [copiedOrder, setCopiedOrder] = useState(false);
+            const [copiedData, setCopiedData] = useState(false);
+
+            const favoritosList = [
+                {
+                    id: 'fav_rosado',
+                    nombre: 'Polerón Boxy Fit Rosado',
+                    precio: CONFIG.precio_poleron,
+                    imgFront: 'POLERON ROSADO/Rosado- bolsillos y bordados.png',
+                    imgBack: 'POLERON ROSADO/rosado-atras bordado.png',
+                    pedidoData: {
+                        producto: 'poleron',
+                        color: 'rosado',
+                        bolsillos: 'con',
+                        bordado_poleron: 'ambos'
+                    }
+                },
+                {
+                    id: 'fav_gris',
+                    nombre: 'Polerón Boxy Fit Gris',
+                    precio: CONFIG.precio_poleron,
+                    imgFront: 'Poleron GRIS/Gris frente sin bolsillos pero con bordado.png',
+                    imgBack: 'Poleron GRIS/parte trasera con bordado.png',
+                    pedidoData: {
+                        producto: 'poleron',
+                        color: 'gris_melange',
+                        bolsillos: 'sin',
+                        bordado_poleron: 'ambos'
+                    }
+                },
+                {
+                    id: 'fav_negro',
+                    nombre: 'Polerón Boxy Fit Negro',
+                    precio: CONFIG.precio_poleron,
+                    imgFront: 'POLERON NEGRO/frontal con bordado sin bolsillos.png',
+                    imgBack: 'POLERON NEGRO/trasero con bordado (1).png',
+                    pedidoData: {
+                        producto: 'poleron',
+                        color: 'negro',
+                        bolsillos: 'sin',
+                        bordado_poleron: 'ambos'
+                    }
+                },
+                {
+                    id: 'fav_pantalon_rosado',
+                    nombre: 'Pantalón Wide Leg Rosado',
+                    precio: CONFIG.precio_pantalon,
+                    imgFront: 'Pantalones Rosados/parte de adelabnte co bordado.png',
+                    imgBack: 'Pantalones Rosados/PANTALONES  atras LK.png',
+                    pedidoData: {
+                        producto: 'pantalon',
+                        color: 'rosado',
+                        bordado_pantalon: 'con'
+                    }
+                },
+                {
+                    id: 'fav_pantalon_gris',
+                    nombre: 'Pantalón Wide Leg Gris',
+                    precio: CONFIG.precio_pantalon,
+                    imgFront: 'PANTALON GRIS/Pantalon gris parte de adelante.png',
+                    imgBack: 'PANTALON GRIS/Pantalon gris parte de atras.png',
+                    pedidoData: {
+                        producto: 'pantalon',
+                        color: 'gris_melange',
+                        bordado_pantalon: 'con'
+                    }
+                },
+                {
+                    id: 'fav_pantalon_negro',
+                    nombre: 'Pantalón Wide Leg Negro',
+                    precio: CONFIG.precio_pantalon,
+                    imgFront: 'PANTALONES NEGROS/pantalones adelante sin bordado.png',
+                    imgBack: 'PANTALONES NEGROS/3(1).png',
+                    pedidoData: {
+                        producto: 'pantalon',
+                        color: 'negro',
+                        bordado_pantalon: 'sin'
+                    }
+                }
+            ];
+
+            // Datos de Outfits
+            const lookOutfitsList = [
+                {
+                    id: 'outfit_gris',
+                    nombre: 'Conjunto Gris Melange',
+                    imgPrincipal: 'look outfit/gris cuerpo 1.png',
+                    items: ['fav_gris', 'fav_pantalon_gris']
+                }
+            ];
+
+            // Estado del pedido
+            const [pedido, setPedido] = useState({
+                producto: null,
+                color: null,
+                talla: null,
+                bolsillos: null,
+                bordado_poleron: null,
+                bolsillos_pantalon: null,
+                bordado_pantalon: null,
+                envio: 'retiro',
+                metodo_pago: 'transferencia',
+                contacto: { nombre: '', correo: '', instagram: '', whatsapp: '' }
+            });
+            const [isSubmitting, setIsSubmitting] = useState(false);
+
+            // Lógica de pasos dinámicos
+            let steps = ["producto", "color_talla"];
+            if (pedido.producto === 'poleron') steps.push("detalles_poleron");
+            if (pedido.producto === 'pantalon') steps.push("detalles_pantalon");
+            if (pedido.producto === 'conjunto') steps.push("detalles_poleron", "detalles_pantalon");
+            steps.push("checkout");
+
+            const currentStep = steps[step];
+
+            // Cálculo de precio
+            let precioBase = 0;
+            if (pedido.producto === 'poleron') precioBase = CONFIG.precio_poleron;
+            if (pedido.producto === 'pantalon') precioBase = CONFIG.precio_pantalon;
+            if (pedido.producto === 'conjunto') precioBase = CONFIG.precio_conjunto;
+            const total = precioBase + (pedido.envio === "despacho" ? CONFIG.precio_envio : 0);
+
+            // Helpers para actualizar el estado
+            const updatePedido = (key, value) => setPedido(prev => ({ ...prev, [key]: value }));
+            const updateContacto = (key, value) => setPedido(prev => ({ ...prev, contacto: { ...prev.contacto, [key]: value } }));
+
+            const nextStep = () => setStep(s => Math.min(s + 1, steps.length - 1));
+            const prevStep = () => {
+                if (isQuickBuy && currentStep === "checkout") {
+                    setIsQuickBuy(false);
+                    setIsStarted(false);
+                    setStep(0);
+                } else {
+                    setStep(s => Math.max(s - 1, 0));
+                }
+            };
+
+            // Validaciones para avanzar
+            const canNext = () => {
+                if (currentStep === "producto") return pedido.producto !== null;
+                if (currentStep === "color_talla") return pedido.talla !== null && pedido.color !== null;
+                if (currentStep === "detalles_poleron") return pedido.bolsillos !== null && pedido.bordado_poleron !== null;
+                if (currentStep === "detalles_pantalon") return pedido.bordado_pantalon !== null;
+                if (currentStep === "checkout") return pedido.contacto.nombre.trim() !== '' && pedido.contacto.correo.includes('@');
+                return true;
+            };
+
+            const confirmarPedido = async () => {
+                if (CONFIG.google_script_url) {
+                    setIsSubmitting(true);
+                    try {
+                        const payload = {
+                            orderId,
+                            producto: pedido.producto,
+                            color: colores.find(c=>c.id===pedido.color)?.label || pedido.color,
+                            talla: pedido.talla,
+                            bolsillos: pedido.bolsillos || 'N/A',
+                            bordado_poleron: pedido.bordado_poleron || 'N/A',
+                            bolsillos_pantalon: pedido.bolsillos_pantalon || 'N/A',
+                            bordado_pantalon: pedido.bordado_pantalon || 'N/A',
+                            total: total,
+                            envio: pedido.envio,
+                            metodo_pago: pedido.metodo_pago,
+                            nombre: pedido.contacto.nombre,
+                            correo: pedido.contacto.correo,
+                            instagram: pedido.contacto.instagram || 'No indicó',
+                            whatsapp: pedido.contacto.whatsapp || 'No indicó'
+                        };
+                        
+                        await fetch(CONFIG.google_script_url, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: {
+                                'Content-Type': 'text/plain;charset=utf-8'
+                            },
+                            body: JSON.stringify(payload)
+                        });
+                    } catch (error) {
+                        console.error("Error enviando pedido:", error);
+                    }
+                    setIsSubmitting(false);
+                }
+                setConfirmado(true);
+            };
+
+            // Nombres de archivos dinámicos para las imágenes
+            const getPreviewFileName = () => {
+                const p = pedido;
+                if (!p.producto || !p.color) return null;
+                
+                // --- MAPEO ESPECÍFICO: POLERÓN ROSADO ---
+                if (p.producto === 'poleron' && p.color === 'rosado') {
+                    let front = '';
+                    let back = '';
+
+                    // Lógica para el FRENTE (Por defecto muestra con bordado y bolsillos si no han elegido)
+                    if (p.bordado_poleron === 'delantero' || p.bordado_poleron === 'ambos' || p.bordado_poleron === null) {
+                        front = (p.bolsillos === 'con' || p.bolsillos === null)
+                            ? `POLERON ROSADO/Rosado- bolsillos y bordados.png`
+                            : `POLERON ROSADO/sin bolsillo pero con bordado alfrente.png`;
+                    } else {
+                        front = (p.bolsillos === 'con' || p.bolsillos === null)
+                            ? `POLERON ROSADO/rosado con bolsillos y sin bordado.png`
+                            : `POLERON ROSADO/sin bolsillos y sin bordados frente.png`;
+                    }
+
+                    // Lógica para la ESPALDA
+                    if (p.bordado_poleron === 'espalda' || p.bordado_poleron === 'ambos') {
+                        back = `POLERON ROSADO/rosado-atras bordado.png`;
+                    } else {
+                        back = `POLERON ROSADO/Espalda sin bordado rosado.png`;
+                    }
+
+                    // Solo dividir la pantalla en el paso de detalles del polerón si ya seleccionó un bordado
+                    if (currentStep === 'detalles_poleron' && p.bordado_poleron !== null) {
+                        return [front, back];
+                    }
+                    return front;
+                }
+
+                // --- MAPEO ESPECÍFICO: POLERÓN GRIS ---
+                if (p.producto === 'poleron' && p.color === 'gris_melange') {
+                    let front = '';
+                    let back = '';
+
+                    // Lógica para el FRENTE
+                    if (p.bordado_poleron === 'delantero' || p.bordado_poleron === 'ambos' || p.bordado_poleron === null) {
+                        front = (p.bolsillos === 'con' || p.bolsillos === null)
+                            ? `Poleron GRIS/POLERON GRIS ENTERO.png`
+                            : `Poleron GRIS/Gris frente sin bolsillos pero con bordado.png`;
+                    } else {
+                        front = (p.bolsillos === 'con' || p.bolsillos === null)
+                            ? `Poleron GRIS/gris frente sin bordado con bolsillos.png`
+                            : `Poleron GRIS/gris sin bordado y sin bolsillo.png`;
+                    }
+
+                    // Lógica para la ESPALDA
+                    if (p.bordado_poleron === 'espalda' || p.bordado_poleron === 'ambos') {
+                        back = `Poleron GRIS/parte trasera con bordado.png`;
+                    } else {
+                        back = `Poleron GRIS/parte trasera SIN BORDADO.png`;
+                    }
+
+                    // Solo dividir la pantalla en el paso de detalles
+                    if (currentStep === 'detalles_poleron' && p.bordado_poleron !== null) {
+                        return [front, back];
+                    }
+                    return front;
+                }
+
+                // --- MAPEO ESPECÍFICO: POLERÓN NEGRO ---
+                if (p.producto === 'poleron' && p.color === 'negro') {
+                    let front = '';
+                    let back = '';
+
+                    // Lógica para el FRENTE
+                    if (p.bordado_poleron === 'delantero' || p.bordado_poleron === 'ambos' || p.bordado_poleron === null) {
+                        front = (p.bolsillos === 'con' || p.bolsillos === null)
+                            ? `POLERON NEGRO/parte fronal polerno negro con todo.png`
+                            : `POLERON NEGRO/frontal con bordado sin bolsillos.png`;
+                    } else {
+                        front = (p.bolsillos === 'con' || p.bolsillos === null)
+                            ? `POLERON NEGRO/frontal sin bordado con bosillos.png`
+                            : `POLERON NEGRO/frontal sin nada.png`;
+                    }
+
+                    // Lógica para la ESPALDA
+                    if (p.bordado_poleron === 'espalda' || p.bordado_poleron === 'ambos') {
+                        back = `POLERON NEGRO/trasero con bordado (1).png`;
+                    } else {
+                        back = `POLERON NEGRO/trasero sin bordado (1).png`;
+                    }
+
+                    // Solo dividir la pantalla en el paso de detalles
+                    if (currentStep === 'detalles_poleron' && p.bordado_poleron !== null) {
+                        return [front, back];
+                    }
+                    return front;
+                }
+
+                // Formato estándar para polerones (Frente y Espalda simultáneos)
+                if (p.producto === 'poleron') {
+                    const bols = p.bolsillos || 'con'; // Muestra bolsillos por defecto
+                    const bor = p.bordado_poleron || 'delantero'; // Muestra bordado delantero por defecto
+                    const frontType = (bor === 'delantero' || bor === 'ambos') ? 'delantero' : 'sin';
+                    const backType = (bor === 'espalda' || bor === 'ambos') ? 'espalda' : 'sin';
+                    
+                    const front = `poleron_${p.color}_bolsillos-${bols}_bordado-${frontType}.png`;
+                    const back = `poleron_${p.color}_bolsillos-sin_bordado-${backType}.png`;
+                    
+                    // Solo dividir la pantalla en el paso de detalles si ya escogió bordado
+                    if (currentStep === 'detalles_poleron' && p.bordado_poleron !== null) {
+                        return [front, back];
+                    }
+                    return front;
+                } 
+                
+                // Pantalón y Conjunto
+                if (p.producto === 'pantalon') {
+                    let front = '';
+                    let back = '';
+
+                    if (p.color === 'rosado') {
+                        front = (p.bordado_pantalon === 'con' || p.bordado_pantalon === null) 
+                            ? `Pantalones Rosados/parte de adelabnte co bordado.png` 
+                            : `Pantalones Rosados/parte adelante sin bordado.png`;
+                        back = `Pantalones Rosados/PANTALONES  atras LK.png`;
+                    } else if (p.color === 'gris_melange') {
+                        front = (p.bordado_pantalon === 'con' || p.bordado_pantalon === null) 
+                            ? `PANTALON GRIS/Pantalon gris parte de adelante.png` 
+                            : `PANTALON GRIS/parte de adelante pantalon sin bordado.png`;
+                        back = `PANTALON GRIS/Pantalon gris parte de atras.png`;
+                    } else if (p.color === 'negro') {
+                        front = (p.bordado_pantalon === 'con' || p.bordado_pantalon === null)
+                            ? `PANTALONES NEGROS/parte de adelante con bordado.png`
+                            : `PANTALONES NEGROS/pantalones adelante sin bordado.png`;
+                        back = `PANTALONES NEGROS/3(1).png`;
+                    } else {
+                        const bol = p.bolsillos_pantalon || 'sin';
+                        const bor = p.bordado_pantalon || 'sin';
+                        front = `pantalon_${p.color}_bolsillos-${bol}_bordado-${bor}.png`;
+                        back = `pantalon_${p.color}_bolsillos-${bol}_bordado-${bor}.png`;
+                    }
+
+                    if (currentStep === 'detalles_pantalon' && p.bordado_pantalon !== null) {
+                        return [front, back];
+                    }
+                    return front;
+                } 
+                if (p.producto === 'conjunto') {
+                    let pol_front = '';
+                    let pol_back = '';
+                    if (p.color === 'rosado') {
+                        pol_front = (p.bordado_poleron === 'delantero' || p.bordado_poleron === 'ambos' || p.bordado_poleron === null)
+                            ? ((p.bolsillos === 'con' || p.bolsillos === null) ? `POLERON ROSADO/Rosado- bolsillos y bordados.png` : `POLERON ROSADO/sin bolsillo pero con bordado alfrente.png`)
+                            : ((p.bolsillos === 'con' || p.bolsillos === null) ? `POLERON ROSADO/rosado con bolsillos y sin bordado.png` : `POLERON ROSADO/sin bolsillos y sin bordados frente.png`);
+                        pol_back = (p.bordado_poleron === 'espalda' || p.bordado_poleron === 'ambos') ? `POLERON ROSADO/rosado-atras bordado.png` : `POLERON ROSADO/Espalda sin bordado rosado.png`;
+                    } else if (p.color === 'gris_melange') {
+                        pol_front = (p.bordado_poleron === 'delantero' || p.bordado_poleron === 'ambos' || p.bordado_poleron === null)
+                            ? ((p.bolsillos === 'con' || p.bolsillos === null) ? `POLERON GRIS/POLERON GRIS ENTERO.png` : `POLERON GRIS/Gris frente sin bolsillos pero con bordado.png`)
+                            : ((p.bolsillos === 'con' || p.bolsillos === null) ? `POLERON GRIS/gris frente sin bordado con bolsillos.png` : `POLERON GRIS/gris sin bordado y sin bolsillo.png`);
+                        pol_back = (p.bordado_poleron === 'espalda' || p.bordado_poleron === 'ambos') ? `POLERON GRIS/parte trasera con bordado.png` : `POLERON GRIS/parte trasera SIN BORDADO.png`;
+                    } else if (p.color === 'negro') {
+                        pol_front = (p.bordado_poleron === 'delantero' || p.bordado_poleron === 'ambos' || p.bordado_poleron === null)
+                            ? ((p.bolsillos === 'con' || p.bolsillos === null) ? `POLERON NEGRO/parte fronal polerno negro con todo.png` : `POLERON NEGRO/frontal con bordado sin bolsillos.png`)
+                            : ((p.bolsillos === 'con' || p.bolsillos === null) ? `POLERON NEGRO/frontal sin bordado con bosillos.png` : `POLERON NEGRO/frontal sin nada.png`);
+                        pol_back = (p.bordado_poleron === 'espalda' || p.bordado_poleron === 'ambos') ? `POLERON NEGRO/trasero con bordado (1).png` : `POLERON NEGRO/trasero sin bordado (1).png`;
+                    }
+
+                    let pan_front = '';
+                    let pan_back = '';
+                    if (p.color === 'rosado') {
+                        pan_front = (p.bordado_pantalon === 'con' || p.bordado_pantalon === null) 
+                            ? `Pantalones Rosados/parte de adelabnte co bordado.png` 
+                            : `Pantalones Rosados/parte adelante sin bordado.png`;
+                        pan_back = `Pantalones Rosados/PANTALONES  atras LK.png`;
+                    } else if (p.color === 'gris_melange') {
+                        pan_front = (p.bordado_pantalon === 'con' || p.bordado_pantalon === null) 
+                            ? `PANTALON GRIS/Pantalon gris parte de adelante.png` 
+                            : `PANTALON GRIS/parte de adelante pantalon sin bordado.png`;
+                        pan_back = `PANTALON GRIS/Pantalon gris parte de atras.png`;
+                    } else if (p.color === 'negro') {
+                        pan_front = (p.bordado_pantalon === 'con' || p.bordado_pantalon === null)
+                            ? `PANTALONES NEGROS/parte de adelante con bordado.png`
+                            : `PANTALONES NEGROS/pantalones adelante sin bordado.png`;
+                        pan_back = `PANTALONES NEGROS/3(1).png`;
+                    }
+                    
+                    if (currentStep === 'detalles_poleron') {
+                        if (p.bordado_poleron !== null) return [pol_front, pol_back];
+                        return pol_front;
+                    }
+                    if (currentStep === 'detalles_pantalon') {
+                        if (p.bordado_pantalon !== null) return [pan_front, pan_back];
+                        return pan_front;
+                    }
+                    
+                    return [pol_front, pan_front];
+                }
+                return null;
+            };
+
+            const getPlaceholderUrl = () => {
+                let type = 'Prenda';
+                if (pedido.producto === 'pantalon') type = 'Pantalón';
+                else if (pedido.producto === 'poleron') type = 'Polerón';
+                else if (pedido.producto === 'conjunto') type = 'Conjunto';
+
+                if (!pedido.color) {
+                    return `https://placehold.co/800x1000/e4e4e7/18181b?text=${type}+%0A(Selecciona+Color)`;
+                }
+
+                const colorObj = colores.find(c => c.id === pedido.color);
+                const colorHex = colorObj ? colorObj.hex.replace('#', '') : '18181b';
+                const textCol = pedido.color === 'negro' ? 'ffffff' : '18181b';
+                
+                // Texto extra para que el usuario vea la configuración aplicada
+                let configText = '';
+                if (pedido.producto === 'poleron' || pedido.producto === 'conjunto') {
+                    configText += `%0A BOLS:${pedido.bolsillos.toUpperCase()} | BORD:${pedido.bordado_poleron.toUpperCase()}`;
+                }
+                if (pedido.producto === 'pantalon' || pedido.producto === 'conjunto') {
+                    configText += `%0A BOLS PANT:${pedido.bolsillos_pantalon.toUpperCase()} | BORD PANT:${pedido.bordado_pantalon.toUpperCase()}`;
+                }
+
+                return `https://placehold.co/800x1000/${colorHex}/${textCol}?text=${type}+${colorObj?.label || ''}${configText}`;
+            };
+
+            // MODAL DE TÉRMINOS Y CONDICIONES
+            const TermsModal = showTerms ? (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm fade-in text-left">
+                    <div className="bg-white w-full max-w-2xl max-h-[85vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden">
+                        <div className="flex justify-between items-center p-6 border-b border-zinc-100">
+                            <h2 className="text-2xl font-black">Términos y Condiciones</h2>
+                            <button onClick={() => setShowTerms(false)} className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center font-bold hover:bg-zinc-200 transition-colors">X</button>
+                        </div>
+                        <div className="p-6 md:p-8 overflow-y-auto hide-scrollbar">
+                            <div className="space-y-8 text-zinc-600 font-medium">
+                                <div>
+                                    <h3 className="text-black font-bold text-xl mb-2 flex items-center gap-2"><span>🧵</span> 1. Hecha especialmente para ti</h3>
+                                    <p>Trabajamos bajo el concepto de producción <strong>Made to Order</strong>. Esto significa que no mantenemos stock; cada prenda se confecciona desde cero, única y exclusivamente porque tú lo pediste. Tu polerón o pantalón existe gracias a ti.</p>
+                                </div>
+                                <div>
+                                    <h3 className="text-black font-bold text-xl mb-2 flex items-center gap-2"><span>🎨</span> 2. Personalización Total</h3>
+                                    <p>Elige tú lo que quieras: color, talla, si lleva bolsillos y si quieres bordado o no. Todo a tu gusto y <strong>sin ningún costo adicional</strong>. El precio que ves es el final.</p>
+                                </div>
+                                <div>
+                                    <h3 className="text-black font-bold text-xl mb-2 flex items-center gap-2"><span>📱</span> 3. ¿Cómo hacer tu pedido?</h3>
+                                    <p>Arma tu prenda aquí en la web. Al finalizar, te daremos un código. Escríbenos por DM de Instagram con ese código, confirmas el pago mediante transferencia y <strong>empezamos a confeccionar</strong>. Te avisaremos apenas esté listo.</p>
+                                </div>
+                                <div>
+                                    <h3 className="text-black font-bold text-xl mb-2 flex items-center gap-2"><span>📦</span> 4. Envíos y Entregas</h3>
+                                    <p>Realizamos <strong>entregas presenciales gratuitas</strong> previa coordinación en estaciones de la <strong>Línea 4</strong> del Metro.</p>
+                                    <p className="mt-2">Para el resto de Santiago y regiones, enviamos a todo Chile exclusivamente a través de <strong>Blue Express (Por Pagar)</strong>. El costo de envío lo cancelas tú directamente al recibir tu paquete.</p>
+                                </div>
+                                <div className="p-5 bg-zinc-50 rounded-2xl border border-zinc-200">
+                                    <h3 className="text-black font-bold text-lg mb-1">Cambios y Devoluciones</h3>
+                                    <p className="text-sm">Al ser prendas personalizadas bajo el formato "Made to Order", <strong>no realizamos devoluciones</strong> por error en elección de talla o arrepentimiento. Asegúrate de revisar tu configuración antes de transferir. Respondemos al 100% por fallas de fábrica.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="p-6 border-t border-zinc-100 bg-zinc-50">
+                            <button onClick={() => setShowTerms(false)} className="w-full bg-black text-white font-bold py-4 rounded-full hover:bg-zinc-800 transition-colors">Entendido 🔑</button>
+                        </div>
+                    </div>
+                </div>
+            ) : null;
+
+            // BOTÓN FLOTANTE WHATSAPP
+            const WhatsAppButton = (
+                <a 
+                    href="https://wa.me/56966808247" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-[100] bg-[#25D366] text-white w-14 h-14 md:w-16 md:h-16 rounded-full flex items-center justify-center shadow-lg shadow-green-500/30 hover:scale-110 transition-transform"
+                    aria-label="Hablar por WhatsApp"
+                >
+                    <svg className="w-8 h-8 md:w-9 md:h-9" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/>
+                    </svg>
+                </a>
+            );
+
+            // PANTALLA DE INICIO (LANDING)
+            if (!isStarted && !selectedFav) {
+                return (
+                    <div className="flex flex-col bg-white fade-in min-h-screen">
+                        {/* Top Pink Banner - Marquee Animado */}
+                        <div className="bg-lk-pink text-white overflow-hidden py-2 relative">
+                            <div className="animate-marquee gap-8">
+                                {[...Array(10)].map((_, i) => (
+                                    <span key={i} className="font-bold text-sm md:text-base tracking-widest whitespace-nowrap">
+                                        Síguenos en Instagram @LOSTKEY.CL
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                        
+                        {/* Header */}
+                        <div className="flex items-center py-2 px-6 md:px-12 bg-white z-10 shadow-sm relative h-16 md:h-24">
+                            <div className="flex-1 flex justify-start gap-4 md:gap-8 items-center">
+                                <button 
+                                    onClick={() => {
+                                        document.getElementById('favoritos-section')?.scrollIntoView({ behavior: 'smooth' });
+                                    }}
+                                    className="text-black font-black uppercase tracking-widest hover:text-lk-pink transition-colors text-xs md:text-base"
+                                >
+                                    Favoritos
+                                </button>
+                                <button 
+                                    onClick={() => {
+                                        document.getElementById('look-outfits-section')?.scrollIntoView({ behavior: 'smooth' });
+                                    }}
+                                    className="text-black font-black uppercase tracking-widest hover:text-lk-pink transition-colors text-xs md:text-base"
+                                >
+                                    Shop the Look
+                                </button>
+                            </div>
+                            <div className="flex-1 flex justify-center h-full">
+                                <img 
+                                    src="./img/logo%20encabezado.png" 
+                                    alt="Lostkey Logo" 
+                                    className="h-full object-contain scale-[2] md:scale-[2.5]"
+                                />
+                            </div>
+                            <div className="flex-1"></div>
+                        </div>
+
+                        {/* Main Content with Image (Ocupa casi toda la pantalla inicial) */}
+                        <div className="relative flex items-center justify-center bg-black overflow-hidden group min-h-[80vh] md:min-h-[85vh]">
+                            {/* ⚠️ REEMPLAZAR AQUÍ CON LA RUTA A TU IMAGEN REAL (ej: "fondo-basket.jpg") */}
+                            <img 
+                                src="./img/FOTO PRESENTAC.png" 
+                                alt="Lostkey Presentación" 
+                                className="absolute inset-0 w-full h-full object-cover opacity-90 group-hover:scale-105 transition-transform duration-1000"
+                            />
+                            
+                            {/* Capa oscura sutil */}
+                            <div className="absolute inset-0 bg-black/10"></div>
+                            
+                            {/* Botón */}
+                            <button 
+                                onClick={() => setIsStarted(true)}
+                                className="relative z-10 border-2 border-white text-white px-8 py-3 text-sm md:text-base font-semibold tracking-widest bg-black/20 backdrop-blur-sm hover:bg-white hover:text-black transition-all hover:scale-105 uppercase"
+                            >
+                                Arma tu prenda
+                            </button>
+                        </div>
+
+                        {/* FAVORITOS GRID */}
+                        <div id="favoritos-section" className="w-full bg-zinc-50 py-16 md:py-24">
+                            <div className="max-w-6xl mx-auto px-4 md:px-6">
+                                <h2 className="text-3xl md:text-5xl font-black mb-12 text-center uppercase tracking-widest text-black">Favoritos</h2>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
+                                    {favoritosList.map(fav => (
+                                        <div key={fav.id} 
+                                             className="group cursor-pointer flex flex-col items-center"
+                                             onClick={() => {
+                                                 setSelectedFav(fav);
+                                                 window.scrollTo(0, 0);
+                                             }}>
+                                            <div className="relative w-full aspect-[4/5] bg-white rounded-[2rem] overflow-hidden shadow-sm border border-zinc-100 hover:shadow-2xl hover:-translate-y-2 transition-all duration-500">
+                                                {/* Imagen Frontal (por defecto visible) */}
+                                                <img 
+                                                    src={`./img/${fav.imgFront}`} 
+                                                    alt={fav.nombre} 
+                                                    className="absolute inset-0 w-full h-full object-contain mix-blend-darken p-6 transition-opacity duration-500 opacity-100 group-hover:opacity-0" 
+                                                />
+                                                {/* Imagen Trasera (visible en hover) */}
+                                                <img 
+                                                    src={`./img/${fav.imgBack}`} 
+                                                    alt={`${fav.nombre} Trasero`} 
+                                                    className="absolute inset-0 w-full h-full object-contain mix-blend-darken p-6 transition-opacity duration-500 opacity-0 group-hover:opacity-100 scale-105 group-hover:scale-100" 
+                                                />
+                                            </div>
+                                            <div className="mt-6 text-center">
+                                                <h3 className="font-bold text-lg md:text-xl uppercase tracking-wider text-black group-hover:text-lk-pink transition-colors">{fav.nombre}</h3>
+                                                <p className="text-zinc-500 font-bold mt-1">${fav.precio.toLocaleString("es-CL")}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* LOOK OUTFITS SECTION */}
+                        <div id="look-outfits-section" className="w-full bg-zinc-50 py-16 md:py-24 border-t border-zinc-100">
+                            <div className="max-w-7xl mx-auto px-4 md:px-12">
+                                <div className="text-center mb-12 md:mb-16">
+                                    <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tighter text-black mb-4">Shop the Look</h2>
+                                    <p className="text-zinc-500 font-medium text-lg">Inspírate y arma tu conjunto completo</p>
+                                </div>
+
+                                <div className="space-y-16">
+                                    {lookOutfitsList.map((outfit) => (
+                                        <div key={outfit.id} className="flex flex-col lg:flex-row gap-8 items-center bg-white rounded-[3rem] p-6 md:p-10 shadow-sm border border-zinc-100">
+                                            {/* Foto Principal Outfit */}
+                                            <div className="w-full lg:w-1/2 aspect-[3/4] bg-zinc-50 rounded-[2rem] overflow-hidden flex items-center justify-center">
+                                                <img src={`./img/${outfit.imgPrincipal}`} alt={outfit.nombre} className="w-full h-full object-contain mix-blend-darken hover:scale-105 transition-transform duration-700" />
+                                            </div>
+                                            
+                                            {/* Items Individuales */}
+                                            <div className="w-full lg:w-1/2 flex flex-col justify-center">
+                                                <h3 className="text-2xl md:text-3xl font-black uppercase text-center lg:text-left mb-8 text-black">{outfit.nombre}</h3>
+                                                <div className="grid grid-cols-2 gap-4 md:gap-6">
+                                                    {outfit.items.map((favId) => {
+                                                        const fav = favoritosList.find(f => f.id === favId);
+                                                        if (!fav) return null;
+                                                        return (
+                                                            <div 
+                                                                key={fav.id}
+                                                                className="group cursor-pointer flex flex-col items-center bg-white"
+                                                                onClick={() => {
+                                                                    setSelectedFav(fav);
+                                                                    window.scrollTo(0, 0);
+                                                                }}
+                                                            >
+                                                                <div className="relative w-full aspect-[4/5] bg-zinc-50 rounded-[1.5rem] overflow-hidden shadow-sm border border-zinc-100 group-hover:border-black group-hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+                                                                    <img src={`./img/${fav.imgFront}`} alt={fav.nombre} className="absolute inset-0 w-full h-full object-contain mix-blend-darken p-4 transition-opacity duration-500 opacity-100 group-hover:opacity-0" />
+                                                                    <img src={`./img/${fav.imgBack}`} alt={`${fav.nombre} Trasero`} className="absolute inset-0 w-full h-full object-contain mix-blend-darken p-4 transition-opacity duration-500 opacity-0 group-hover:opacity-100 scale-105 group-hover:scale-100" />
+                                                                </div>
+                                                                <div className="mt-4 text-center">
+                                                                    <h4 className="font-bold text-sm md:text-base uppercase tracking-wider text-black group-hover:text-lk-pink transition-colors">{fav.nombre}</h4>
+                                                                    <p className="text-zinc-500 text-sm md:text-base font-bold mt-1">${fav.precio.toLocaleString("es-CL")}</p>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* INSTAGRAM GRID FEED */}
+                        <div className="w-full bg-white py-16 md:py-24">
+                            <div className="max-w-6xl mx-auto px-4 md:px-6 flex flex-col items-center">
+                                <a href={`https://instagram.com/${CONFIG.ig_user}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-black hover:text-pink-500 transition-colors mb-10 group">
+                                    <svg className="w-8 h-8 md:w-10 md:h-10 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
+                                    </svg>
+                                    <h3 className="text-2xl md:text-4xl font-black tracking-tighter uppercase">@{CONFIG.ig_user}</h3>
+                                </a>
+
+                                <div className="grid grid-cols-3 gap-1 md:gap-4 w-full max-w-4xl">
+                                    {[
+                                        "./img/Fotos%20de%20instagram/10.png",
+                                        "./img/Fotos%20de%20instagram/11.png",
+                                        "./img/Fotos%20de%20instagram/6.png",
+                                        "./img/Fotos%20de%20instagram/7.png",
+                                        "./img/Fotos%20de%20instagram/Proyecto%20nuevo%20(12).png",
+                                        "./img/Fotos%20de%20instagram/post%20poto.png"
+                                    ].map((imgSrc, i) => (
+                                        <a href={`https://instagram.com/${CONFIG.ig_user}`} target="_blank" rel="noopener noreferrer" key={i} className="group relative aspect-square bg-zinc-50 overflow-hidden cursor-pointer shadow-sm">
+                                            <img src={imgSrc} className="w-full h-full object-cover mix-blend-darken group-hover:scale-110 transition-transform duration-700" alt={`Post ${i}`} />
+                                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                                <svg className="w-8 h-8 text-white drop-shadow-lg" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                                            </div>
+                                        </a>
+                                    ))}
+                                </div>
+                                
+                                <a href={`https://instagram.com/${CONFIG.ig_user}`} target="_blank" rel="noopener noreferrer" className="mt-10 border-2 border-black text-black px-8 py-3 font-bold uppercase tracking-widest hover:bg-black hover:text-white transition-colors">
+                                    Ver más en Instagram
+                                </a>
+                            </div>
+                        </div>
+
+                        {/* FOOTER: Suscripción, Instagram, Términos y Políticas */}
+                        <footer className="bg-zinc-100 py-16 px-6 flex flex-col items-center text-center">
+                            
+                            {/* Suscripción a correo */}
+                            <div className="max-w-md w-full mb-12">
+                                <h3 className="text-2xl font-bold mb-2">Únete al club 🔑</h3>
+                                <p className="text-zinc-500 mb-6 text-sm">Suscríbete para recibir los últimos drops, diseños exclusivos y acceso anticipado.</p>
+                                <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); alert("¡Gracias por suscribirte!"); }}>
+                                    <input 
+                                        type="email" 
+                                        placeholder="Tu correo electrónico" 
+                                        required
+                                        className="flex-1 px-5 py-3 rounded-full border border-zinc-300 focus:outline-none focus:border-black font-medium transition-all" 
+                                    />
+                                    <button type="submit" className="bg-black text-white px-6 py-3 rounded-full font-bold hover:bg-zinc-800 transition-colors">
+                                        Unirme
+                                    </button>
+                                </form>
+                            </div>
+
+                            {/* Logo Instagram */}
+                            <a href={`https://instagram.com/${CONFIG.ig_user}`} target="_blank" rel="noopener noreferrer" className="mb-12 flex flex-col items-center hover:scale-105 transition-transform group">
+                                <div className="w-16 h-16 bg-black rounded-3xl flex items-center justify-center mb-3 shadow-lg group-hover:shadow-xl transition-all">
+                                    <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
+                                    </svg>
+                                </div>
+                                <span className="font-bold text-lg">@{CONFIG.ig_user}</span>
+                            </a>
+
+                            {/* Enlaces Legales */}
+                            <div className="flex flex-wrap justify-center gap-6 text-sm text-zinc-500 mb-6 font-medium">
+                                <a href="#" onClick={e => { e.preventDefault(); setShowTerms(true); }} className="hover:text-black transition-colors">Términos y Condiciones</a>
+                                <a href="#" onClick={e => { e.preventDefault(); setShowTerms(true); }} className="hover:text-black transition-colors">Modelo "Made to Order"</a>
+                                <a href="#" onClick={e => { e.preventDefault(); setShowTerms(true); }} className="hover:text-black transition-colors">Cambios y Devoluciones</a>
+                            </div>
+
+                            <div className="text-sm text-zinc-400 font-medium">
+                                &copy; {new Date().getFullYear()} LOSTKEY. Todos los derechos reservados.
+                            </div>
+                        </footer>
+                        
+                        {/* INYECTAMOS EL MODAL DE TÉRMINOS */}
+                        {TermsModal}
+                        
+                        {/* BOTÓN WHATSAPP */}
+                        {WhatsAppButton}
+                    </div>
+                );
+            }
+
+            // PANTALLA DE DETALLE DE PRODUCTO (FAVORITOS / QUICK BUY)
+            if (!isStarted && selectedFav) {
+                return (
+                    <div className="min-h-[100dvh] flex flex-col bg-white fade-in">
+                        {/* Header Minimalista */}
+                        <div className="flex justify-between items-center py-4 px-6 md:px-12 border-b border-zinc-100 bg-white sticky top-0 z-50 shadow-sm">
+                            <button onClick={() => {setSelectedFav(null); setFavTalla(null);}} className="text-zinc-500 hover:text-lk-pink font-bold flex items-center gap-2 transition-colors">
+                                ← Volver
+                            </button>
+                            <img src="./img/logo%20encabezado.png" alt="Lostkey Logo" className="h-10 md:h-16 object-contain scale-[1.5] md:scale-[2]" />
+                            <div className="w-20"></div> {/* Spacer */}
+                        </div>
+
+                        <div className="flex flex-col md:flex-row max-w-7xl mx-auto w-full flex-1 md:py-8">
+                            {/* Lado Izquierdo - Imágenes */}
+                            <div className="w-full md:w-3/5 p-4 md:p-8 flex flex-col md:flex-row gap-4">
+                                <div className="flex-1 bg-zinc-50 rounded-3xl p-4 flex items-center justify-center border border-zinc-100 aspect-[4/5] md:aspect-auto md:h-[75vh]">
+                                    <img src={`./img/${selectedFav.imgFront}`} alt="Frente" className="w-full h-full object-contain mix-blend-darken hover:scale-105 transition-transform duration-700" />
+                                </div>
+                                <div className="flex-1 bg-zinc-50 rounded-3xl p-4 flex items-center justify-center border border-zinc-100 aspect-[4/5] md:aspect-auto md:h-[75vh]">
+                                    <img src={`./img/${selectedFav.imgBack}`} alt="Espalda" className="w-full h-full object-contain mix-blend-darken hover:scale-105 transition-transform duration-700" />
+                                </div>
+                            </div>
+
+                            {/* Lado Derecho - Info de Producto */}
+                            <div className="w-full md:w-2/5 p-6 md:p-12 flex flex-col justify-center">
+                                <div className="mb-2 text-lk-pink font-bold text-sm tracking-widest uppercase">Lostkey Exclusivo</div>
+                                <h1 className="text-3xl md:text-5xl font-black uppercase tracking-tighter mb-4 text-black">{selectedFav.nombre}</h1>
+                                <p className="text-2xl md:text-3xl font-medium text-zinc-600 mb-8">${selectedFav.precio.toLocaleString("es-CL")}</p>
+
+                                <div className="mb-10">
+                                    <div className="flex justify-between items-end mb-4">
+                                        <h3 className="font-bold text-lg text-black">Talla <span className="text-lk-pink">{favTalla ? `: ${favTalla}` : ''}</span></h3>
+                                    </div>
+                                    <div className="grid grid-cols-4 gap-3">
+                                        {tallas.map(t => (
+                                            <button 
+                                                key={t}
+                                                onClick={() => setFavTalla(t)}
+                                                className={`py-4 rounded-2xl font-bold text-lg transition-all ${
+                                                    favTalla === t 
+                                                    ? 'bg-black text-white shadow-lg shadow-black/20 scale-105' 
+                                                    : 'bg-zinc-100 text-zinc-500 hover:bg-zinc-200'
+                                                }`}
+                                            >
+                                                {t}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <button 
+                                    disabled={!favTalla}
+                                    onClick={() => {
+                                        setPedido(prev => ({
+                                            ...prev,
+                                            ...selectedFav.pedidoData,
+                                            talla: favTalla,
+                                            bolsillos_pantalon: null,
+                                            bordado_pantalon: null
+                                        }));
+                                        setIsQuickBuy(true);
+                                        setIsStarted(true);
+                                        setStep(3);
+                                    }}
+                                    className={`w-full py-5 rounded-full font-black text-lg md:text-xl uppercase tracking-wider transition-all mb-8 ${
+                                        favTalla 
+                                        ? 'bg-lk-pink text-white hover:bg-pink-500 hover:scale-[1.02] shadow-xl shadow-pink-500/30' 
+                                        : 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
+                                    }`}
+                                >
+                                    Ir a comprar
+                                </button>
+                                
+                                <div className="space-y-6">
+                                    <div>
+                                        <h4 className="font-bold text-black flex items-center gap-2 mb-2"><span>📦</span> Detalles del Producto</h4>
+                                        <p className="text-zinc-500 text-sm leading-relaxed">
+                                            {selectedFav.pedidoData.producto === 'poleron' 
+                                                ? `Hoodie de color ${selectedFav.pedidoData.color === 'gris_melange' ? 'gris melange' : selectedFav.pedidoData.color} confeccionado en franela algodón nacional (no peinado). Un clásico adaptado a nuestro estilo, con goma en cintura ajustable, detalles únicos y calidad premium.`
+                                                : `Pantalón Wide Leg de color ${selectedFav.pedidoData.color === 'gris_melange' ? 'gris melange' : selectedFav.pedidoData.color} confeccionado en franela algodón nacional (no peinado). Corte holgado y relajado, con cintura elástica ajustable para mayor comodidad y calidad premium.`
+                                            }
+                                        </p>
+                                    </div>
+                                    {selectedFav.pedidoData.producto === 'poleron' && (
+                                        <div className="pt-6 border-t border-zinc-100">
+                                            <h4 className="font-bold text-black uppercase text-sm tracking-widest mb-4">Guía de Tallas</h4>
+                                            <img src="./img/POLERON ROSADO/Tallas poleron (1).png" alt="Guía de Tallas" className="w-full max-w-sm rounded-2xl border border-zinc-200 shadow-sm" />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {/* FOOTER */}
+                        <footer className="bg-zinc-100 py-12 px-6 flex flex-col items-center text-center mt-12">
+                            <div className="text-sm text-zinc-400 font-medium">
+                                &copy; {new Date().getFullYear()} LOSTKEY. Todos los derechos reservados.
+                            </div>
+                        </footer>
+                    </div>
+                );
+            }
+
+            // PANTALLA DE SELECCIÓN DE PRODUCTO (PASO 1 FULLSCREEN)
+            if (currentStep === "producto") {
+                return (
+                    <div className="min-h-[100dvh] flex flex-col bg-[#f4f4f5] md:bg-white fade-in items-center justify-center p-6 relative">
+                        {/* BOTÓN VOLVER AL INICIO */}
+                        <div className="absolute top-6 left-6 md:top-8 md:left-8 flex gap-4 items-center z-10">
+                            <button onClick={() => setIsStarted(false)} className="w-10 h-10 md:w-12 md:h-12 bg-white md:bg-zinc-100 rounded-full flex items-center justify-center shadow-sm hover:bg-zinc-200 transition-colors">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                            </button>
+                            <img src="./img/logo%20encabezado.png" alt="Lostkey" className="h-12 md:h-16 object-contain" />
+                        </div>
+
+                        <h2 className="text-4xl md:text-5xl lg:text-[4rem] font-black mb-16 md:mb-24 text-center uppercase tracking-widest text-black mt-16">
+                            Escoge la prenda
+                        </h2>
+                        
+                        <div className="flex flex-col md:flex-row justify-center items-center gap-8 md:gap-14 w-full max-w-6xl pb-10">
+                            {[
+                                { id: 'poleron', nombre: 'POLERÓN', lineart: 'poleron' },
+                                { id: 'conjunto', nombre: 'CONJUNTO', lineart: 'conjunto' },
+                                { id: 'pantalon', nombre: 'PANTALÓN', lineart: 'pantalon' }
+                            ].map(prod => (
+                                <button 
+                                    key={prod.id} 
+                                    onClick={() => {
+                                        updatePedido('producto', prod.id);
+                                        nextStep();
+                                    }}
+                                    className="relative flex flex-col items-center justify-between bg-white rounded-[2.5rem] md:rounded-[3rem] p-8 w-64 h-72 md:w-[320px] md:h-[360px] transition-all duration-300 border-2 border-black/80 shadow-[0_15px_40px_rgba(0,0,0,0.08)] hover:-translate-y-2 hover:shadow-[0_25px_50px_rgba(0,0,0,0.15)] group"
+                                >
+                                    <div className="flex-1 w-full flex items-center justify-center p-4 mb-6">
+                                        <img 
+                                            src={`./img/${prod.id}-icono.png`} 
+                                            alt={prod.nombre} 
+                                            onError={(e) => {
+                                                // Fallback por si la imagen aún no está en la carpeta img/
+                                                e.target.onerror = null; 
+                                                e.target.src = `https://placehold.co/400x500/ffffff/18181b?text=${prod.nombre}`;
+                                            }}
+                                            className="w-full h-full max-h-40 md:max-h-52 object-contain mix-blend-multiply opacity-80 transition-opacity group-hover:opacity-100 group-hover:scale-105 duration-300"
+                                        />
+                                    </div>
+                                    <div className="text-sm md:text-lg font-bold tracking-widest text-black uppercase mt-auto">
+                                        {prod.nombre}
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                );
+            }
+
+            // PANTALLA DE ÉXITO
+            if (confirmado) {
+                let mpLink = '';
+                if (pedido.producto === 'conjunto') mpLink = 'https://mpago.la/2U6vwey';
+                else if (pedido.producto === 'pantalon') mpLink = 'https://mpago.la/2QPVcd8';
+                else if (pedido.producto === 'poleron') mpLink = 'https://mpago.la/2iTHQwX';
+
+                const copiarPedido = () => {
+                    navigator.clipboard.writeText(orderId);
+                    setCopiedOrder(true);
+                    setTimeout(() => setCopiedOrder(false), 2000);
+                };
+
+                const copiarDatos = () => {
+                    const datos = `Total a transferir: $${total.toLocaleString("es-CL")}\nBanco: ${CONFIG.banco}\nTipo: ${CONFIG.cuenta_tipo}\nNúmero: ${CONFIG.cuenta_numero}\nNombre: ${CONFIG.nombre_titular}\nRUT: ${CONFIG.rut_titular}${CONFIG.correo_transferencia ? `\nCorreo: ${CONFIG.correo_transferencia}` : ''}`;
+                    navigator.clipboard.writeText(datos);
+                    setCopiedData(true);
+                    setTimeout(() => setCopiedData(false), 2000);
+                };
+
+                return (
+                    <div className="min-h-[100dvh] flex items-center justify-center p-4 bg-zinc-100 relative">
+                        <div className="absolute top-6 left-6 md:top-8 md:left-8 z-10">
+                            <button onClick={() => setConfirmado(false)} className="bg-white border-2 border-transparent hover:border-black text-black px-6 py-3 rounded-full font-bold shadow-sm transition-all flex items-center gap-2">
+                                ← Volver
+                            </button>
+                        </div>
+                        <div className="max-w-md w-full bg-white rounded-3xl p-8 shadow-xl text-center fade-in mt-12 md:mt-0">
+                            <div className="w-20 h-20 bg-black text-white rounded-full flex items-center justify-center text-4xl mx-auto mb-6">🔑</div>
+                            <h2 className="text-3xl font-bold mb-2">¡Pedido Armado!</h2>
+                            <p className="text-zinc-500 mb-6">
+                                {pedido.metodo_pago === 'transferencia' 
+                                    ? "Transfiere el total y envíanos el comprobante por Instagram para empezar la confección."
+                                    : "Realiza el pago a través de Mercado Pago y envíanos el comprobante por Instagram para empezar la confección."}
+                            </p>
+                            
+                            <div className="bg-black text-white p-4 rounded-2xl mb-6 shadow-md border-2 border-dashed border-white/30 relative group">
+                                <p className="text-sm text-zinc-400 mb-1 uppercase tracking-wider font-bold">Tu Número de Pedido</p>
+                                <p className="text-3xl font-black tracking-widest">{orderId}</p>
+                                <p className="text-xs text-zinc-400 mt-2 mb-4">
+                                    {pedido.metodo_pago === 'transferencia' 
+                                        ? "⚠️ Escribe este número en el comentario o mensaje de tu transferencia para poder verificarla." 
+                                        : "⚠️ Envíanos este número junto a la captura de pago de Mercado Pago."}
+                                </p>
+                                <button onClick={copiarPedido} className="w-full bg-white/20 hover:bg-white/30 text-white font-bold py-2 rounded-xl text-sm transition-colors flex items-center justify-center gap-2">
+                                    {copiedOrder ? "¡Copiado!" : "Copiar Número de Pedido"}
+                                </button>
+                            </div>
+                            
+                            {pedido.metodo_pago === 'transferencia' ? (
+                                <div className="bg-zinc-50 rounded-2xl p-5 mb-8 text-left border border-zinc-100">
+                                    <div className="flex justify-between mb-2"><span className="text-zinc-500">Total a transferir</span><span className="font-bold text-xl">${total.toLocaleString("es-CL")}</span></div>
+                                    <div className="w-full h-px bg-zinc-200 my-4"></div>
+                                    <div className="text-sm space-y-2 text-zinc-600 mb-6">
+                                        <div className="flex justify-between"><span>Banco</span><span className="font-medium text-black">{CONFIG.banco}</span></div>
+                                        <div className="flex justify-between"><span>Tipo</span><span className="font-medium text-black">{CONFIG.cuenta_tipo}</span></div>
+                                        <div className="flex justify-between"><span>Número</span><span className="font-medium text-black">{CONFIG.cuenta_numero}</span></div>
+                                        <div className="flex justify-between"><span>Nombre</span><span className="font-medium text-black">{CONFIG.nombre_titular}</span></div>
+                                        <div className="flex justify-between"><span>RUT</span><span className="font-medium text-black">{CONFIG.rut_titular}</span></div>
+                                        {CONFIG.correo_transferencia && (
+                                            <div className="flex justify-between"><span>Correo</span><span className="font-medium text-black">{CONFIG.correo_transferencia}</span></div>
+                                        )}
+                                    </div>
+                                    <button onClick={copiarDatos} className="w-full border-2 border-black text-black hover:bg-black hover:text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2">
+                                        {copiedData ? "¡Datos Copiados!" : "Copiar Datos de Transferencia"}
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="mb-8">
+                                    <a href={mpLink} target="_blank" rel="noopener noreferrer" className="block w-full py-4 bg-[#009EE3] text-white rounded-2xl font-bold text-lg hover:scale-105 transition-transform shadow-lg shadow-[#009EE3]/30">
+                                        Pagar con Mercado Pago →
+                                    </a>
+                                </div>
+                            )}
+
+                            <a href={`https://ig.me/m/${CONFIG.ig_user}`} target="_blank" rel="noopener noreferrer" 
+                               className="block w-full py-4 bg-black text-white rounded-full font-bold text-lg hover:scale-105 transition-transform">
+                                Enviar Comprobante a @{CONFIG.ig_user} →
+                            </a>
+                        </div>
+                    </div>
+                );
+            }
+
+            // PANTALLA CHECKOUT (SHOPIFY STYLE)
+            if (currentStep === "checkout") {
+                const filenames = getPreviewFileName();
+                const thumb = Array.isArray(filenames) ? filenames[0] : (filenames || getPlaceholderUrl());
+                const imgSrc = filenames ? `./img/${thumb}` : thumb;
+
+                return (
+                    <div className="min-h-[100dvh] bg-white flex flex-col-reverse md:flex-row fade-in font-sans">
+                        {/* LEFT COLUMN: FORM */}
+                        <div className="w-full md:w-1/2 lg:w-[55%] p-6 md:p-12 lg:pl-24 xl:pl-32 bg-white flex flex-col border-r border-zinc-200">
+                            {/* Header */}
+                            <div className="mb-8">
+                                <img src="./img/logo%20encabezado.png" alt="Lostkey" className="h-12 md:h-16 object-contain mb-6 cursor-pointer" onClick={() => setIsStarted(false)} />
+                                <div className="flex gap-2 text-sm font-medium text-zinc-500">
+                                    <button onClick={() => setStep(0)} className="hover:text-black">Prenda</button>
+                                    <span>›</span>
+                                    <button onClick={prevStep} className="hover:text-black">Personalización</button>
+                                    <span>›</span>
+                                    <span className="text-black font-bold">Pago</span>
+                                </div>
+                            </div>
+
+                            <div className="space-y-10 max-w-xl">
+                                {/* CONTACTO */}
+                                <section>
+                                    <h2 className="text-xl font-bold mb-4">Contacto</h2>
+                                    <div className="space-y-4">
+                                        <input type="email" placeholder="Correo electrónico *" value={pedido.contacto.correo} onChange={e => updateContacto('correo', e.target.value)} className="w-full border border-zinc-300 rounded-lg px-4 py-3 outline-none focus:border-black focus:ring-1 focus:ring-black transition-all" />
+                                        <input type="text" placeholder="Nombre completo *" value={pedido.contacto.nombre} onChange={e => updateContacto('nombre', e.target.value)} className="w-full border border-zinc-300 rounded-lg px-4 py-3 outline-none focus:border-black focus:ring-1 focus:ring-black transition-all" />
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <input type="text" placeholder="Instagram (opcional)" value={pedido.contacto.instagram} onChange={e => updateContacto('instagram', e.target.value)} className="w-full border border-zinc-300 rounded-lg px-4 py-3 outline-none focus:border-black focus:ring-1 focus:ring-black transition-all" />
+                                            <input type="tel" placeholder="WhatsApp (opcional)" value={pedido.contacto.whatsapp} onChange={e => updateContacto('whatsapp', e.target.value)} className="w-full border border-zinc-300 rounded-lg px-4 py-3 outline-none focus:border-black focus:ring-1 focus:ring-black transition-all" />
+                                        </div>
+                                    </div>
+                                </section>
+
+                                {/* ENTREGA */}
+                                <section>
+                                    <h2 className="text-xl font-bold mb-4">Entrega</h2>
+                                    <div className="border border-zinc-300 rounded-lg overflow-hidden">
+                                        <label className={`flex items-center justify-between p-4 cursor-pointer transition-colors ${pedido.envio === 'retiro' ? 'bg-zinc-50' : 'bg-white'}`}>
+                                            <div className="flex items-center gap-3">
+                                                <input type="radio" checked={pedido.envio === 'retiro'} onChange={() => updatePedido('envio', 'retiro')} className="w-4 h-4 text-black focus:ring-black" />
+                                                <div>
+                                                    <div className="font-semibold text-sm">🚇 Entrega Presencial</div>
+                                                    <div className="text-xs text-zinc-500">Línea 4 del Metro</div>
+                                                </div>
+                                            </div>
+                                            <span className="font-semibold text-sm">Gratis</span>
+                                        </label>
+                                        <div className="h-px w-full bg-zinc-300"></div>
+                                        <label className={`flex items-center justify-between p-4 cursor-pointer transition-colors ${pedido.envio === 'despacho' ? 'bg-zinc-50' : 'bg-white'}`}>
+                                            <div className="flex items-center gap-3">
+                                                <input type="radio" checked={pedido.envio === 'despacho'} onChange={() => updatePedido('envio', 'despacho')} className="w-4 h-4 text-black focus:ring-black" />
+                                                <div>
+                                                    <div className="font-semibold text-sm">📦 Despacho a Domicilio / Sucursal</div>
+                                                    <div className="text-xs text-zinc-500">Vía Blue Express</div>
+                                                </div>
+                                            </div>
+                                            <span className="font-semibold text-sm">Por Pagar</span>
+                                        </label>
+                                    </div>
+                                </section>
+
+                                {/* PAGO */}
+                                <section>
+                                    <h2 className="text-xl font-bold mb-1">Pago</h2>
+                                    <p className="text-sm text-zinc-500 mb-4">Todas las transacciones son seguras y están encriptadas.</p>
+                                    <div className="border border-zinc-300 rounded-lg overflow-hidden">
+                                        <label className={`flex items-center justify-between p-4 cursor-pointer transition-colors ${pedido.metodo_pago === 'transferencia' ? 'bg-zinc-50' : 'bg-white'}`}>
+                                            <div className="flex items-center gap-3">
+                                                <input type="radio" checked={pedido.metodo_pago === 'transferencia'} onChange={() => updatePedido('metodo_pago', 'transferencia')} className="w-4 h-4 text-black focus:ring-black" />
+                                                <span className="font-semibold text-sm">🏦 Transferencia Bancaria</span>
+                                            </div>
+                                        </label>
+                                        <div className="h-px w-full bg-zinc-300"></div>
+                                        <label className={`flex items-center justify-between p-4 cursor-pointer transition-colors ${pedido.metodo_pago === 'mercadopago' ? 'bg-zinc-50' : 'bg-white'}`}>
+                                            <div className="flex items-center gap-3">
+                                                <input type="radio" checked={pedido.metodo_pago === 'mercadopago'} onChange={() => updatePedido('metodo_pago', 'mercadopago')} className="w-4 h-4 text-[#009EE3] focus:ring-[#009EE3]" />
+                                                <span className="font-semibold text-sm">🤝 Tarjetas vía Mercado Pago</span>
+                                            </div>
+                                        </label>
+                                    </div>
+                                    <div className="mt-4 p-4 bg-zinc-100 rounded-lg text-sm text-zinc-600 text-center">
+                                        {pedido.metodo_pago === 'transferencia' ? "Transferencia directa a cuenta vista (Mercado Pago). Te daremos los datos en el siguiente paso." : "Serás redirigido para pagar con Tarjeta de Débito, Crédito o dinero en cuenta tras confirmar tu pedido."}
+                                    </div>
+                                </section>
+
+                                {/* BOTÓN FINAL */}
+                                <div className="pt-4 border-t border-zinc-200">
+                                    <button 
+                                        disabled={!canNext() || isSubmitting}
+                                        onClick={confirmarPedido}
+                                        className={`w-full py-4 rounded-lg font-bold text-lg transition-all ${
+                                            canNext() && !isSubmitting
+                                            ? 'bg-black text-white hover:bg-zinc-800' 
+                                            : 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
+                                        }`}
+                                    >
+                                        {isSubmitting ? "Procesando..." : "Confirmar Pedido"}
+                                    </button>
+                                </div>
+
+                                <div className="h-20 md:h-0"></div> {/* Spacer mobile */}
+                            </div>
+                        </div>
+
+                        {/* RIGHT COLUMN: SUMMARY */}
+                        <div className="w-full md:w-1/2 lg:w-[45%] p-6 md:p-12 lg:pr-24 xl:pr-32 bg-zinc-50 border-b md:border-b-0 border-zinc-200">
+                            <div className="max-w-md md:sticky top-12 space-y-6">
+                                {/* ITEM ROW */}
+                                <div className="flex items-center gap-4">
+                                    <div className="relative w-16 h-16 bg-white border border-zinc-200 rounded-lg flex items-center justify-center p-1">
+                                        <span className="absolute -top-2 -right-2 bg-zinc-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold">1</span>
+                                        <img src={imgSrc} alt="Preview" className="w-full h-full object-contain mix-blend-darken" onError={(e)=>{e.target.src=getPlaceholderUrl()}} />
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="font-semibold text-sm capitalize">{pedido.producto} {colores.find(c=>c.id===pedido.color)?.label}</div>
+                                        <div className="text-xs text-zinc-500 mt-1">
+                                            Talla {pedido.talla} 
+                                            {pedido.producto === 'poleron' && ` • Bolsillos: ${pedido.bolsillos} • Bordado: ${pedido.bordado_poleron}`}
+                                            {pedido.producto === 'pantalon' && ` • Bordado: ${pedido.bordado_pantalon}`}
+                                            {pedido.producto === 'conjunto' && ` • Bolsillos Polerón: ${pedido.bolsillos} • Bordado Polerón: ${pedido.bordado_poleron} • Bordado Pantalón: ${pedido.bordado_pantalon}`}
+                                        </div>
+                                    </div>
+                                    <div className="font-medium text-sm">${precioBase.toLocaleString("es-CL")}</div>
+                                </div>
+                                
+                                <div className="h-px w-full bg-zinc-200"></div>
+
+                                {/* TOTALS */}
+                                <div className="space-y-3 text-sm">
+                                    <div className="flex justify-between">
+                                        <span className="text-zinc-600">Subtotal</span>
+                                        <span className="font-medium">${precioBase.toLocaleString("es-CL")}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-zinc-600">Envío</span>
+                                        <span className="font-medium">{pedido.envio === 'despacho' ? 'Por pagar' : 'Gratis'}</span>
+                                    </div>
+                                </div>
+                                
+                                <div className="h-px w-full bg-zinc-200"></div>
+
+                                <div className="flex justify-between items-center">
+                                    <span className="font-bold text-lg">Total</span>
+                                    <span className="font-black text-2xl"><span className="text-xs font-normal text-zinc-500 mr-2">CLP</span>${total.toLocaleString("es-CL")}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            // PANTALLAS DEL CONFIGURADOR (PASO 2 EN ADELANTE)
+            const currentColorObj = colores.find(c => c.id === pedido.color);
+            const panelBgColor = currentColorObj ? currentColorObj.bg : '#f4f4f5';
+
+            return (
+                <div className="h-[100dvh] flex flex-col md:flex-row bg-white fade-in overflow-hidden">
+                    
+                    {/* PANEL IZQUIERDO: PREVIEW DINÁMICO */}
+                    <div 
+                        className="w-full md:w-1/2 lg:w-3/5 relative h-[45dvh] md:h-full flex flex-col items-center justify-center p-4 md:p-8 transition-colors duration-500"
+                        style={{ backgroundColor: panelBgColor }}
+                    >
+                        {/* Header Logo Mobile */}
+                        <div className="absolute top-6 left-6 md:hidden z-10">
+                            <img src="./img/lostkey-superior.png" alt="Lostkey" className="h-12 object-contain" />
+                        </div>
+                        
+                        {/* Imagen del producto */}
+                        <div className="w-full h-full flex flex-row items-center justify-center relative z-0 gap-2 md:gap-4 px-2 md:px-0">
+                            {(() => {
+                                const filenames = getPreviewFileName();
+                                if (!filenames) {
+                                    return (
+                                        <img 
+                                            key="placeholder" 
+                                            src={getPlaceholderUrl()} 
+                                            alt="Preview" 
+                                            className="max-w-full max-h-full object-contain drop-shadow-2xl fade-in mix-blend-darken"
+                                        />
+                                    );
+                                }
+                                
+                                const filesArray = Array.isArray(filenames) ? filenames : [filenames];
+                                
+                                return filesArray.map((file, index) => (
+                                    <img 
+                                        key={JSON.stringify(pedido) + index} 
+                                        src={`./img/${file}`} 
+                                        onError={(e) => {
+                                            e.target.onerror = null; 
+                                            e.target.src = getPlaceholderUrl();
+                                        }}
+                                        alt={`Preview ${index}`} 
+                                        className={`${filesArray.length > 1 ? 'w-1/2' : 'max-w-full'} max-h-full object-contain drop-shadow-2xl fade-in mix-blend-darken ${file.includes('PANTALONES NEGROS') ? 'scale-[0.70]' : ''}`}
+                                    />
+                                ));
+                            })()}
+                        </div>
+
+                        {/* Detalles Flotantes (Badge) */}
+                        {pedido.producto && (
+                            <div className="absolute bottom-6 left-4 right-4 md:left-8 md:bottom-8 bg-white/90 backdrop-blur-md p-3 md:p-4 rounded-2xl shadow-lg border border-white/50 slide-in-right z-10 hidden md:block">
+                                <div className="flex justify-between items-end">
+                                    <div>
+                                        <h3 className="font-bold text-lg md:text-xl uppercase">{pedido.producto} {colores.find(c=>c.id===pedido.color)?.label}</h3>
+                                        <p className="text-xs md:text-sm text-zinc-500 font-medium">
+                                            {pedido.talla ? `Talla ${pedido.talla}` : 'Sin talla'} 
+                                            {pedido.producto === 'poleron' ? ` • ${pedido.bolsillos==='con'?'C/ Bolsillos':'S/ Bolsillos'}` : ''}
+                                        </p>
+                                    </div>
+                                    <div className="text-xl md:text-2xl font-black">${total.toLocaleString("es-CL")}</div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* PANEL DERECHO: CONFIGURADOR TIPO KIOSKO */}
+                    <div className="w-full md:w-1/2 lg:w-2/5 flex flex-col h-[55dvh] md:h-full bg-white relative rounded-t-3xl md:rounded-none -mt-4 md:mt-0 z-20 shadow-[0_-15px_30px_rgba(0,0,0,0.08)] md:shadow-none">
+                        
+                        {/* Header Desktop */}
+                        <div className="hidden md:flex justify-between items-center p-8 pb-4">
+                            <img src="./img/lostkey-superior.png" alt="Lostkey" className="h-16 object-contain" />
+                            <div className="text-sm font-semibold bg-zinc-100 px-4 py-2 rounded-full">Paso {step + 1} de {steps.length}</div>
+                        </div>
+
+                        {/* Contenido Desplazable */}
+                        <div className="flex-1 overflow-y-auto p-6 md:p-8 hide-scrollbar">
+                            
+                            {/* BOTÓN VOLVER */}
+                            {step > 0 ? (
+                                <button onClick={prevStep} className="text-zinc-400 font-medium hover:text-black transition-colors mb-6 flex items-center gap-2">
+                                    ← Volver al paso anterior
+                                </button>
+                            ) : (
+                                <button onClick={() => setIsStarted(false)} className="text-zinc-400 font-medium hover:text-black transition-colors mb-6 flex items-center gap-2">
+                                    ← Volver al inicio
+                                </button>
+                            )}
+
+                            {/* PASO 2: COLOR Y TALLA */}
+                            {currentStep === "color_talla" && (
+                                <div className="fade-in">
+                                    <h2 className="text-3xl font-bold mb-8">Elige Color y Talla</h2>
+                                    
+                                    <div className="mb-8">
+                                        <h3 className="font-semibold text-lg mb-4">Color</h3>
+                                        <div className="flex gap-4">
+                                            {colores.map(c => (
+                                                <button 
+                                                    key={c.id} 
+                                                    onClick={() => updatePedido('color', c.id)}
+                                                    className={`w-24 h-28 rounded-2xl flex flex-col items-center justify-center gap-2 border-2 transition-all ${
+                                                        pedido.color === c.id ? 'border-black bg-zinc-50 shadow-md scale-105' : 'border-transparent hover:bg-zinc-50'
+                                                    }`}
+                                                >
+                                                    <div className="w-12 h-12 rounded-full shadow-inner border border-zinc-200" style={{ backgroundColor: c.hex }}></div>
+                                                    <span className="text-xs font-semibold text-center leading-tight">{c.label}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <h3 className="font-semibold text-lg mb-4 flex justify-between items-end">
+                                            Talla
+                                        </h3>
+                                        <div className="grid grid-cols-4 gap-3 md:gap-4">
+                                            {tallas.map(t => (
+                                                <button 
+                                                    key={t} 
+                                                    onClick={() => updatePedido('talla', t)}
+                                                    className={`py-4 rounded-2xl font-bold text-lg md:text-xl transition-all ${
+                                                        pedido.talla === t 
+                                                        ? 'bg-black text-white shadow-lg shadow-black/30 scale-105' 
+                                                        : 'bg-zinc-100 text-zinc-500 hover:bg-zinc-200'
+                                                    }`}
+                                                >
+                                                    {t}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        
+                                        {/* TABLA DE TALLAS */}
+                                        {(pedido.producto === 'poleron' || pedido.producto === 'conjunto') && (
+                                            <div className="mt-8 w-full slide-in-bottom">
+                                                <h4 className="text-sm font-bold text-zinc-400 uppercase tracking-widest mb-4">Guía de Tallas (Polerón)</h4>
+                                                <img src="./img/POLERON ROSADO/Tallas poleron (1).png" alt="Guía de Tallas Polerón" className="w-full max-w-md mx-auto object-contain rounded-2xl shadow-sm border border-black/5" />
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* PASO 3: DETALLES POLERON */}
+                            {currentStep === "detalles_poleron" && (
+                                <div className="fade-in">
+                                    <h2 className="text-3xl font-bold mb-8">Detalles del Polerón</h2>
+                                    
+                                    <div className="mb-8">
+                                        <h3 className="font-semibold text-lg mb-4">Bolsillos</h3>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            {['con', 'sin'].map(op => (
+                                                <button 
+                                                    key={op} 
+                                                    onClick={() => updatePedido('bolsillos', op)}
+                                                    className={`p-5 rounded-2xl border-2 font-semibold text-lg transition-all ${
+                                                        pedido.bolsillos === op ? 'border-black bg-black text-white' : 'border-zinc-200 bg-white'
+                                                    }`}
+                                                >
+                                                    {op === 'con' ? 'Con Bolsillos' : 'Sin Bolsillos'}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <h3 className="font-semibold text-lg mb-4">Bordado</h3>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            {[
+                                                {id: 'delantero', l: 'Delantero'}, {id: 'espalda', l: 'Trasero'}, 
+                                                {id: 'ambos', l: 'Ambos Lados'}, {id: 'sin', l: 'Sin Bordado'}
+                                            ].map(op => (
+                                                <button 
+                                                    key={op.id} 
+                                                    onClick={() => updatePedido('bordado_poleron', op.id)}
+                                                    className={`p-4 rounded-2xl border-2 font-semibold transition-all ${
+                                                        pedido.bordado_poleron === op.id ? 'border-black bg-zinc-50' : 'border-zinc-200 bg-white'
+                                                    }`}
+                                                >
+                                                    {op.l}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* PASO 3 ALTERNO: DETALLES PANTALON */}
+                            {currentStep === "detalles_pantalon" && (
+                                <div className="fade-in">
+                                    <h2 className="text-3xl font-bold mb-8">Detalles del Pantalón</h2>
+                                    
+                                    <div>
+                                        <h3 className="font-semibold text-lg mb-4">Bordado</h3>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            {['con', 'sin'].map(op => (
+                                                <button 
+                                                    key={op} 
+                                                    onClick={() => updatePedido('bordado_pantalon', op)}
+                                                    className={`p-5 rounded-2xl border-2 font-semibold text-lg transition-all ${
+                                                        pedido.bordado_pantalon === op ? 'border-black bg-zinc-50' : 'border-zinc-200 bg-white'
+                                                    }`}
+                                                >
+                                                    {op === 'con' ? 'Con Bordado' : 'Sin Bordado'}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+
+
+                            {/* FOOTER ESPACIO PARA SCROLL */}
+                            <div className="h-32"></div>
+
+                        </div>
+
+                        {/* FOOTER FIJO (Navegación / Continuar) */}
+                        <div className="bg-white border-t border-zinc-100 p-6 md:p-8 flex items-center justify-between sticky bottom-0 z-10 shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
+                            <div className="hidden md:block">
+                                <div className="text-sm font-bold text-zinc-400 uppercase tracking-widest mb-1">Total a pagar</div>
+                                <div className="text-2xl font-black">${total.toLocaleString("es-CL")}</div>
+                            </div>
+                            
+                            <button 
+                                disabled={!canNext() || isSubmitting}
+                                onClick={currentStep === "pago" ? confirmarPedido : nextStep}
+                                className={`w-full md:w-auto py-4 px-10 rounded-full font-bold text-lg transition-all ${
+                                    canNext() && !isSubmitting
+                                    ? 'bg-black text-white hover:scale-105 shadow-xl shadow-black/20' 
+                                    : 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
+                                }`}
+                            >
+                                {isSubmitting ? "Procesando..." : (currentStep === "pago" ? "Confirmar Pedido 🔑" : "Continuar →")}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<LostKeyApp />);
+    </script>
+</body>
+</html>
