@@ -210,21 +210,62 @@
             };
             const [isSubmitting, setIsSubmitting] = useState(false);
 
-            // Efecto para actualizar la URL visualmente sin recargar
+            // Efecto para actualizar la URL visualmente y añadir al historial de navegación
             React.useEffect(() => {
                 let hash = '';
                 if (confirmado) {
                     hash = '#pedido-confirmado';
                 } else if (isStarted) {
                     let stepName = 'armar-prenda';
-                    // Calcular el nombre del paso actual de forma segura
                     const currentStepName = ["producto", "color_talla", "detalles_poleron", "detalles_pantalon", "checkout"][step];
                     if (currentStepName) stepName = currentStepName.replace('_', '-');
                     hash = '#vista=' + stepName;
                 }
-                // Actualizamos la URL sin añadirlo al historial para no romper el botón "Atrás" del navegador
-                window.history.replaceState(null, '', window.location.pathname + window.location.search + hash);
+                
+                // Usamos pushState para que el botón Atrás de Google funcione
+                if (window.location.hash !== hash) {
+                    window.history.pushState(null, '', window.location.pathname + window.location.search + hash);
+                }
             }, [isStarted, step, confirmado]);
+
+            // Efecto para escuchar el botón Atrás o Adelante del navegador
+            React.useEffect(() => {
+                const handlePopState = () => {
+                    const hash = window.location.hash;
+                    if (!hash || hash === '') {
+                        setIsStarted(false);
+                        setConfirmado(false);
+                        return;
+                    }
+                    if (hash === '#pedido-confirmado') {
+                        setConfirmado(true);
+                        return;
+                    }
+                    if (hash.startsWith('#vista=')) {
+                        const view = hash.replace('#vista=', '');
+                        const viewToStep = view.replace('-', '_');
+                        
+                        let currentSteps = ["producto", "color_talla"];
+                        if (pedido.producto === 'poleron') currentSteps.push("detalles_poleron");
+                        if (pedido.producto === 'pantalon') currentSteps.push("detalles_pantalon");
+                        if (pedido.producto === 'conjunto') currentSteps.push("detalles_poleron", "detalles_pantalon");
+                        currentSteps.push("checkout");
+
+                        const index = currentSteps.indexOf(viewToStep);
+                        if (index !== -1) {
+                            setStep(index);
+                            setIsStarted(true);
+                            setConfirmado(false);
+                        } else {
+                            setStep(0);
+                            setIsStarted(true);
+                        }
+                    }
+                };
+
+                window.addEventListener('popstate', handlePopState);
+                return () => window.removeEventListener('popstate', handlePopState);
+            }, [pedido.producto]);
 
             // Lógica de pasos dinámicos
             let steps = ["producto", "color_talla"];
