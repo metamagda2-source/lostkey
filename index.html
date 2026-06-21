@@ -1322,7 +1322,7 @@
                                             e.target.onerror = null; 
                                             e.target.src = getPlaceholderUrl();
                                         }}
-                                        alt={`Preview ${index}`} 
+                                        alt={`LostKey ${pedido.producto || 'Prenda'} ${pedido.color ? pedido.color.replace('_', ' ') : ''} ${filesArray.length > 1 ? (index === 0 ? 'Frente' : 'Espalda') : ''} Personalizado`} 
                                         className={`${filesArray.length > 1 ? 'w-1/2' : 'max-w-full'} max-h-full object-contain drop-shadow-2xl fade-in mix-blend-darken ${file.includes('PANTALONES NEGROS') ? 'scale-[0.70]' : ''}`}
                                     />
                                 ));
