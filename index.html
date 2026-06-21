@@ -220,6 +220,9 @@
                 let hash = '';
                 if (confirmado) {
                     hash = '#pedido-confirmado';
+                } else if (selectedFav) {
+                    const cleanName = selectedFav.nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+                    hash = '#producto=' + cleanName;
                 } else if (isStarted) {
                     let stepName = 'armar-prenda';
                     const currentStepName = ["producto", "color_talla", "detalles_poleron", "detalles_pantalon", "checkout"][step];
@@ -231,12 +234,16 @@
                 if (window.location.hash !== hash) {
                     window.history.pushState(null, '', window.location.pathname + window.location.search + hash);
                 }
-            }, [isStarted, step, confirmado]);
+            }, [isStarted, step, confirmado, selectedFav]);
 
             // Efecto para escuchar el botón Atrás o Adelante del navegador
             React.useEffect(() => {
                 const handlePopState = () => {
                     const hash = window.location.hash;
+                    
+                    // Al retroceder, limpiamos la vista de favorito por defecto
+                    setSelectedFav(null);
+
                     if (!hash || hash === '') {
                         setIsStarted(false);
                         setConfirmado(false);
@@ -244,6 +251,18 @@
                     }
                     if (hash === '#pedido-confirmado') {
                         setConfirmado(true);
+                        return;
+                    }
+                    if (hash.startsWith('#producto=')) {
+                        const productSlug = hash.replace('#producto=', '');
+                        const fav = favoritosList.find(f => {
+                            const cleanName = f.nombre.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+                            return cleanName === productSlug;
+                        });
+                        if (fav) {
+                            setSelectedFav(fav);
+                            setIsStarted(false);
+                        }
                         return;
                     }
                     if (hash.startsWith('#vista=')) {
