@@ -443,9 +443,9 @@
                         pol_back = (p.bordado_poleron === 'espalda' || p.bordado_poleron === 'ambos') ? `POLERON ROSADO/rosado-atras bordado.png` : `POLERON ROSADO/Espalda sin bordado rosado.png`;
                     } else if (p.color === 'gris_melange') {
                         pol_front = (p.bordado_poleron === 'delantero' || p.bordado_poleron === 'ambos' || p.bordado_poleron === null)
-                            ? ((p.bolsillos === 'con' || p.bolsillos === null) ? `POLERON GRIS/POLERON GRIS ENTERO.png` : `POLERON GRIS/Gris frente sin bolsillos pero con bordado.png`)
-                            : ((p.bolsillos === 'con' || p.bolsillos === null) ? `POLERON GRIS/gris frente sin bordado con bolsillos.png` : `POLERON GRIS/gris sin bordado y sin bolsillo.png`);
-                        pol_back = (p.bordado_poleron === 'espalda' || p.bordado_poleron === 'ambos') ? `POLERON GRIS/parte trasera con bordado.png` : `POLERON GRIS/parte trasera SIN BORDADO.png`;
+                            ? ((p.bolsillos === 'con' || p.bolsillos === null) ? `Poleron GRIS/POLERON GRIS ENTERO.png` : `Poleron GRIS/Gris frente sin bolsillos pero con bordado.png`)
+                            : ((p.bolsillos === 'con' || p.bolsillos === null) ? `Poleron GRIS/gris frente sin bordado con bolsillos.png` : `Poleron GRIS/gris sin bordado y sin bolsillo.png`);
+                        pol_back = (p.bordado_poleron === 'espalda' || p.bordado_poleron === 'ambos') ? `Poleron GRIS/parte trasera con bordado.png` : `Poleron GRIS/parte trasera SIN BORDADO.png`;
                     } else if (p.color === 'negro') {
                         pol_front = (p.bordado_poleron === 'delantero' || p.bordado_poleron === 'ambos' || p.bordado_poleron === null)
                             ? ((p.bolsillos === 'con' || p.bolsillos === null) ? `POLERON NEGRO/parte fronal polerno negro con todo.png` : `POLERON NEGRO/frontal con bordado sin bolsillos.png`)
@@ -503,10 +503,10 @@
                 // Texto extra para que el usuario vea la configuración aplicada
                 let configText = '';
                 if (pedido.producto === 'poleron' || pedido.producto === 'conjunto') {
-                    configText += `%0A BOLS:${pedido.bolsillos.toUpperCase()} | BORD:${pedido.bordado_poleron.toUpperCase()}`;
+                    configText += `%0A BOLS:${(pedido.bolsillos||'').toUpperCase()} | BORD:${(pedido.bordado_poleron||'').toUpperCase()}`;
                 }
                 if (pedido.producto === 'pantalon' || pedido.producto === 'conjunto') {
-                    configText += `%0A BOLS PANT:${pedido.bolsillos_pantalon.toUpperCase()} | BORD PANT:${pedido.bordado_pantalon.toUpperCase()}`;
+                    configText += `%0A BOLS PANT:${(pedido.bolsillos_pantalon||'').toUpperCase()} | BORD PANT:${(pedido.bordado_pantalon||'').toUpperCase()}`;
                 }
 
                 return `https://placehold.co/800x1000/${colorHex}/${textCol}?text=${type}+${colorObj?.label || ''}${configText}`;
