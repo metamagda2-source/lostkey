@@ -349,7 +349,7 @@
                     try {
                         const payload = {
                             orderId,
-                            producto: pedido.producto,
+                            producto: isQuickBuy ? `🌟 ${selectedFav.nombre}` : pedido.producto,
                             color: colores.find(c=>c.id===pedido.color)?.label || pedido.color,
                             talla: pedido.talla,
                             bolsillos: pedido.bolsillos || 'N/A',
@@ -920,9 +920,7 @@
                                         setPedido(prev => ({
                                             ...prev,
                                             ...selectedFav.pedidoData,
-                                            talla: favTalla,
-                                            bolsillos_pantalon: null,
-                                            bordado_pantalon: null
+                                            talla: favTalla
                                         }));
                                         setIsQuickBuy(true);
                                         setIsStarted(true);
