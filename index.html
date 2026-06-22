@@ -216,7 +216,7 @@
                 bordado_pantalon: null,
                 envio: 'retiro',
                 metodo_pago: 'transferencia',
-                contacto: { nombre: '', correo: '', instagram: '', whatsapp: '' }
+                contacto: { nombre: '', correo: '', instagram: '', whatsapp: '', direccion: '' }
             };
             const [pedido, setPedido] = useState(initialPedidoState);
 
@@ -225,6 +225,65 @@
                 setConfirmado(false);
             };
             const [isSubmitting, setIsSubmitting] = useState(false);
+
+            // Efecto para inyectar JSON-LD dinámico para SEO (Google Merchant/Shopping)
+            useEffect(() => {
+                let script = document.getElementById('seo-json-ld');
+                if (!script) {
+                    script = document.createElement('script');
+                    script.type = 'application/ld+json';
+                    script.id = 'seo-json-ld';
+                    document.head.appendChild(script);
+                }
+
+                // Valores por defecto
+                let productName = "LostKey - Ropa Streetwear Boxy Fit";
+                let productDesc = "Prendas exclusivas bajo el modelo Made to Order. Diseños urbanos y personalizados a tu medida.";
+                let productPrice = 25990;
+                let imageUrl = "https://lostkey.cl/img/placeholder.jpg";
+
+                if (pedido.producto) {
+                    const colorLabel = colores.find(c => c.id === pedido.color)?.label || pedido.color || "";
+                    const tipoPrenda = pedido.producto === 'poleron' ? 'Polerón Boxy Fit' : pedido.producto === 'pantalon' ? 'Pantalón Wide Leg' : 'Conjunto Completo';
+                    
+                    productName = `${tipoPrenda} ${colorLabel ? colorLabel + ' ' : ''}- LostKey`;
+                    productDesc = `Prenda de corte ${pedido.producto === 'pantalon' ? 'Wide Leg' : 'Boxy Fit'}, diseño exclusivo. Personaliza tu estilo con la mejor calidad nacional.`;
+                    
+                    if (pedido.producto === 'poleron') productPrice = CONFIG.precio_poleron;
+                    if (pedido.producto === 'pantalon') productPrice = CONFIG.precio_pantalon;
+                    if (pedido.producto === 'conjunto') productPrice = CONFIG.precio_conjunto;
+
+                    // Construcción de la URL de imagen lo más precisa posible
+                    if (selectedFav && selectedFav.imgFront) {
+                        imageUrl = `https://lostkey.cl/img/${encodeURIComponent(selectedFav.imgFront)}`;
+                    } else if (pedido.color) {
+                        if (pedido.producto === 'poleron') imageUrl = `https://lostkey.cl/img/POLERON%20${pedido.color.toUpperCase()}/poleron_${pedido.color}_bolsillos-con_bordado-delantero.png`;
+                        if (pedido.producto === 'pantalon') imageUrl = `https://lostkey.cl/img/PANTALON%20${pedido.color.toUpperCase()}/pantalon_${pedido.color}.png`;
+                    }
+                }
+
+                const jsonLd = {
+                    "@context": "https://schema.org/",
+                    "@type": "Product",
+                    "name": productName,
+                    "image": imageUrl,
+                    "description": productDesc,
+                    "brand": {
+                        "@type": "Brand",
+                        "name": "LostKey"
+                    },
+                    "offers": {
+                        "@type": "Offer",
+                        "url": window.location.href,
+                        "priceCurrency": "CLP",
+                        "price": productPrice.toString(),
+                        "availability": "https://schema.org/InStock",
+                        "itemCondition": "https://schema.org/NewCondition"
+                    }
+                };
+
+                script.text = JSON.stringify(jsonLd);
+            }, [pedido.producto, pedido.color, selectedFav]);
 
             // Efecto para actualizar la URL visualmente y añadir al historial de navegación
             React.useEffect(() => {
@@ -339,7 +398,13 @@
                 if (currentStep === "color_talla") return pedido.talla !== null && pedido.color !== null;
                 if (currentStep === "detalles_poleron") return pedido.bolsillos !== null && pedido.bordado_poleron !== null;
                 if (currentStep === "detalles_pantalon") return pedido.bordado_pantalon !== null;
-                if (currentStep === "checkout") return pedido.contacto.nombre.trim() !== '' && pedido.contacto.correo.includes('@');
+                if (currentStep === "checkout") {
+                    const baseValido = pedido.contacto.nombre.trim() !== '' && pedido.contacto.correo.includes('@');
+                    if (pedido.envio === 'despacho') {
+                        return baseValido && pedido.contacto.direccion.trim() !== '';
+                    }
+                    return baseValido;
+                }
                 return true;
             };
 
@@ -362,7 +427,8 @@
                             nombre: pedido.contacto.nombre,
                             correo: pedido.contacto.correo,
                             instagram: pedido.contacto.instagram || 'No indicó',
-                            whatsapp: pedido.contacto.whatsapp || 'No indicó'
+                            whatsapp: pedido.contacto.whatsapp || 'No indicó',
+                            direccion: pedido.contacto.direccion || 'N/A'
                         };
                         
                         await fetch(CONFIG.google_script_url, {
@@ -1163,6 +1229,11 @@
                                             <span className="font-semibold text-sm">Por Pagar</span>
                                         </label>
                                     </div>
+                                    {pedido.envio === 'despacho' && (
+                                        <div className="mt-4 fade-in">
+                                            <input type="text" placeholder="Dirección completa de envío *" value={pedido.contacto.direccion} onChange={e => updateContacto('direccion', e.target.value)} className="w-full border border-zinc-300 rounded-lg px-4 py-3 outline-none focus:border-black focus:ring-1 focus:ring-black transition-all" />
+                                        </div>
+                                    )}
                                 </section>
 
                                 {/* PAGO */}
