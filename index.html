@@ -20,8 +20,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Outfit', sans-serif; background-color: #f4f4f5; color: #18181b; }
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
         /* Animaciones suaves */
         .fade-in { animation: fadeIn 0.4s ease-out forwards; }
@@ -104,6 +102,14 @@
             const [showConfigDescription, setShowConfigDescription] = useState(false);
             const [step, setStep] = useState(0);
             const [confirmado, setConfirmado] = useState(false);
+
+            // Al cambiar de paso, volver arriba el contenedor del configurador
+            useEffect(() => {
+                const el = document.getElementById('config-scroll');
+                if (el) {
+                    el.scrollTop = 0;
+                }
+            }, [step]);
             const [orderId] = useState(() => {
                 const timePart = Date.now().toString(36).toUpperCase().slice(-4);
                 const randomPart = Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -700,7 +706,7 @@
                             <h2 className="text-2xl font-black">Términos y Condiciones</h2>
                             <button onClick={() => setShowTerms(false)} className="w-10 h-10 bg-zinc-100 rounded-full flex items-center justify-center font-bold hover:bg-zinc-200 transition-colors">X</button>
                         </div>
-                        <div className="p-6 md:p-8 overflow-y-auto hide-scrollbar" id="seccion-terminos">
+                        <div className="p-6 md:p-8 overflow-y-auto" id="seccion-terminos">
                             <div className="space-y-8 text-zinc-600 font-medium">
                                 <div id="seccion-made-to-order">
                                     <h3 className="text-black font-bold text-xl mb-2 flex items-center gap-2"><span>🧵</span> 1. Hecha especialmente para ti</h3>
@@ -1402,7 +1408,7 @@
                         </div>
 
                         {/* Contenido Desplazable */}
-                        <div className="flex-1 overflow-y-auto p-6 md:p-8 hide-scrollbar">
+                        <div id="config-scroll" className="flex-1 overflow-y-auto p-6 md:p-8">
                             
                             {/* BOTÓN VOLVER */}
                             {step > 0 ? (
