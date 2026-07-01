@@ -16,6 +16,8 @@
     <script src="https://unpkg.com/@babel/standalone@7.23.10/babel.min.js"></script>
     <!-- Tailwind CSS para diseño FULL PRO -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Cloudflare Turnstile -->
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <!-- Google Fonts: Outfit (Urbana, moderna y amigable) -->
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -109,6 +111,23 @@
                 if (el) {
                     el.scrollTop = 0;
                 }
+                
+                // Renderizar Turnstile explícitamente cuando llegamos al paso de checkout
+                const checkAndRenderTurnstile = () => {
+                    const turnstileContainer = document.getElementById('turnstile-container');
+                    // Si el contenedor existe y está vacío
+                    if (turnstileContainer && turnstileContainer.innerHTML === '') {
+                        if (window.turnstile) {
+                            window.turnstile.render('#turnstile-container', {
+                                sitekey: '0x4AAAAAADuKwpmc13HOtZht'
+                            });
+                        } else {
+                            // Si el contenedor existe pero el script de Turnstile aún no carga, reintentar en 200ms
+                            setTimeout(checkAndRenderTurnstile, 200);
+                        }
+                    }
+                };
+                setTimeout(checkAndRenderTurnstile, 100);
             }, [step]);
             const [orderId] = useState(() => {
                 const timePart = Date.now().toString(36).toUpperCase().slice(-4);
@@ -434,7 +453,8 @@
                             correo: pedido.contacto.correo,
                             instagram: pedido.contacto.instagram || 'No indicó',
                             whatsapp: pedido.contacto.whatsapp || 'No indicó',
-                            direccion: pedido.contacto.direccion || 'N/A'
+                            direccion: pedido.contacto.direccion || 'N/A',
+                            turnstile_token: document.querySelector('[name="cf-turnstile-response"]')?.value || ''
                         };
                         
                         await fetch(CONFIG.google_script_url, {
@@ -1271,8 +1291,11 @@
                                     </div>
                                 </section>
 
+                                {/* TURNSTILE (Protección contra bots) */}
+                                <div id="turnstile-container" className="mt-4 h-[65px]"></div>
+
                                 {/* BOTÓN FINAL */}
-                                <div className="pt-4 border-t border-zinc-200">
+                                <div className="pt-4 mt-4 border-t border-zinc-200">
                                     <button 
                                         disabled={!canNext() || isSubmitting}
                                         onClick={confirmarPedido}
