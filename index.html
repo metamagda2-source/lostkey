@@ -16,6 +16,8 @@
     <script src="https://unpkg.com/@babel/standalone@7.23.10/babel.min.js"></script>
     <!-- Tailwind CSS para diseño FULL PRO -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Cloudflare Turnstile -->
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
     <!-- Google Fonts: Outfit (Urbana, moderna y amigable) -->
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -108,19 +110,6 @@
                 const el = document.getElementById('config-scroll');
                 if (el) {
                     el.scrollTop = 0;
-                }
-                
-                // Lógica simple para SPAs: Cargar el script solo en el paso de checkout
-                if (step === 4 || step === 5) {
-                    const scriptId = 'turnstile-script-dynamic';
-                    if (!document.getElementById(scriptId)) {
-                        const script = document.createElement('script');
-                        script.id = scriptId;
-                        script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
-                        script.async = true;
-                        script.defer = true;
-                        document.body.appendChild(script);
-                    }
                 }
             }, [step]);
             const [orderId] = useState(() => {
@@ -238,6 +227,31 @@
                 contacto: { nombre: '', correo: '', instagram: '', whatsapp: '', direccion: '' }
             };
             const [pedido, setPedido] = useState(initialPedidoState);
+
+            // Renderizado explícito de Turnstile cuando llegamos al checkout
+            useEffect(() => {
+                let stepsArr = ["producto", "color_talla"];
+                if (pedido.producto === 'poleron') stepsArr.push("detalles_poleron");
+                if (pedido.producto === 'pantalon') stepsArr.push("detalles_pantalon");
+                if (pedido.producto === 'conjunto') stepsArr.push("detalles_poleron", "detalles_pantalon");
+                stepsArr.push("checkout");
+
+                if (stepsArr[step] === "checkout" || (!isStarted && selectedFav)) {
+                    const renderTurnstile = () => {
+                        const container = document.getElementById('turnstile-container');
+                        if (container && container.innerHTML === '') {
+                            if (window.turnstile) {
+                                window.turnstile.render('#turnstile-container', {
+                                    sitekey: '0x4AAAAAADuKwpmc13HOtZht'
+                                });
+                            } else {
+                                setTimeout(renderTurnstile, 200);
+                            }
+                        }
+                    };
+                    setTimeout(renderTurnstile, 100);
+                }
+            }, [step, pedido.producto, isStarted, selectedFav]);
 
             const resetPedido = () => {
                 setPedido(initialPedidoState);
@@ -1286,7 +1300,7 @@
                                 </section>
 
                                 {/* TURNSTILE (Protección contra bots) */}
-                                <div className="cf-turnstile mt-4 h-[65px] flex justify-center" data-sitekey="0x4AAAAAADuKwpmc13HOtZht"></div>
+                                <div id="turnstile-container" className="mt-4 h-[65px] flex justify-center"></div>
 
                                 {/* BOTÓN FINAL */}
                                 <div className="pt-4 mt-4 border-t border-zinc-200">
