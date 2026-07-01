@@ -115,19 +115,25 @@
                 // Renderizar Turnstile explícitamente cuando llegamos al paso de checkout
                 const checkAndRenderTurnstile = () => {
                     const turnstileContainer = document.getElementById('turnstile-container');
-                    // Si el contenedor existe y está vacío
-                    if (turnstileContainer && turnstileContainer.innerHTML === '') {
-                        if (window.turnstile) {
-                            window.turnstile.render('#turnstile-container', {
-                                sitekey: '0x4AAAAAADuKwpmc13HOtZht'
-                            });
-                        } else {
-                            // Si el contenedor existe pero el script de Turnstile aún no carga, reintentar en 200ms
+                    
+                    if (turnstileContainer) {
+                        if (turnstileContainer.innerHTML === '') {
+                            if (window.turnstile) {
+                                window.turnstile.render('#turnstile-container', {
+                                    sitekey: '0x4AAAAAADuKwpmc13HOtZht'
+                                });
+                            } else {
+                                setTimeout(checkAndRenderTurnstile, 200);
+                            }
+                        }
+                    } else {
+                        // Si no lo encuentra, pero seguimos en el paso 4 (checkout), sigue buscando
+                        if (step === 4 || step === 5) {
                             setTimeout(checkAndRenderTurnstile, 200);
                         }
                     }
                 };
-                setTimeout(checkAndRenderTurnstile, 100);
+                checkAndRenderTurnstile();
             }, [step]);
             const [orderId] = useState(() => {
                 const timePart = Date.now().toString(36).toUpperCase().slice(-4);
