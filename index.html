@@ -87,36 +87,6 @@
 
         const tallas = ["S", "M", "L", "XL"];
 
-        // --- COMPONENTE TURNSTILE ---
-        const TurnstileWidget = ({ onVerify }) => {
-            const containerRef = React.useRef(null);
-            
-            useEffect(() => {
-                let widgetId = null;
-                const renderWidget = () => {
-                    if (window.turnstile && containerRef.current && containerRef.current.innerHTML === '') {
-                        widgetId = window.turnstile.render(containerRef.current, {
-                            sitekey: '0x4AAAAAADuKwpmc13HOtZht',
-                            callback: function(token) {
-                                onVerify(token);
-                            }
-                        });
-                    } else if (!window.turnstile) {
-                        setTimeout(renderWidget, 200);
-                    }
-                };
-                renderWidget();
-                
-                return () => {
-                    if (widgetId !== null && window.turnstile) {
-                        window.turnstile.remove(widgetId);
-                    }
-                };
-            }, []);
-            
-            return <div ref={containerRef} className="mt-4 flex justify-center w-full min-h-[65px]"></div>;
-        };
-
         // --- COMPONENTE PRINCIPAL ---
         function LostKeyApp() {
             const [isStarted, setIsStarted] = useState(false);
@@ -134,7 +104,6 @@
             const [showConfigDescription, setShowConfigDescription] = useState(false);
             const [step, setStep] = useState(0);
             const [confirmado, setConfirmado] = useState(false);
-            const [turnstileToken, setTurnstileToken] = useState('');
 
             // Al cambiar de paso, volver arriba el contenedor del configurador
             useEffect(() => {
@@ -463,7 +432,7 @@
                 if (currentStep === "detalles_poleron") return pedido.bolsillos !== null && pedido.bordado_poleron !== null;
                 if (currentStep === "detalles_pantalon") return pedido.bordado_pantalon !== null;
                 if (currentStep === "checkout") {
-                    const baseValido = pedido.contacto.nombre.trim() !== '' && pedido.contacto.correo.includes('@') && turnstileToken !== '';
+                    const baseValido = pedido.contacto.nombre.trim() !== '' && pedido.contacto.correo.includes('@');
                     if (pedido.envio === 'despacho') {
                         return baseValido && pedido.contacto.direccion.trim() !== '';
                     }
@@ -492,8 +461,7 @@
                             correo: pedido.contacto.correo,
                             instagram: pedido.contacto.instagram || 'No indicó',
                             whatsapp: pedido.contacto.whatsapp || 'No indicó',
-                            direccion: pedido.contacto.direccion || 'N/A',
-                            turnstile_token: turnstileToken
+                            direccion: pedido.contacto.direccion || 'N/A'
                         };
                         
                         await fetch(CONFIG.google_script_url, {
@@ -1330,9 +1298,6 @@
                                     </div>
                                 </section>
 
-                                {/* TURNSTILE (Protección contra bots) */}
-                                <TurnstileWidget onVerify={setTurnstileToken} />
-
                                 {/* BOTÓN FINAL */}
                                 <div className="pt-4 mt-4 border-t border-zinc-200">
                                     <button 
@@ -1344,7 +1309,7 @@
                                             : 'bg-zinc-200 text-zinc-400 cursor-not-allowed'
                                         }`}
                                     >
-                                        {isSubmitting ? "Procesando..." : (turnstileToken === '' ? "Falta verificación de seguridad" : "Confirmar Pedido")}
+                                        {isSubmitting ? "Procesando..." : "Confirmar Pedido"}
                                     </button>
                                 </div>
 
